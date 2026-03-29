@@ -11,7 +11,7 @@
 
 ## 🗺️ Vision / ビジョン
 In Japanese culture, **Yorimichi** means to stop by somewhere on one's way home or to take a side trip. This engine digitizes that spontaneity. 
-日本の「寄り道」文化をデジタル化します。最短距離ではなく、あえて遠回りをしてでも通りたい「情緒ある道」を提案します。
+日本における「寄り道」の文化をデジタル化します。最短距離ではなく、あえて遠回りをしてでも通りたい「情緒ある道」を提案します。
 
 - **Focus Area:** Higashiyama, Kyoto (Temples, Shrines, Parks, and Traditional Alleys).
 - **Core Value:** Discovery over speed. (スピードよりも、発見を。)
