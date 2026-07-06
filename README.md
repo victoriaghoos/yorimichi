@@ -69,23 +69,23 @@ This project follows a **Hexagonal Architecture (Ports & Adapters)** to ensure t
 
 本プロジェクトは**ヘキサゴナルアーキテクチャ**を採用しており、ビジネスロジックを外部技術（PostGIS、FastAPIなど）から完全に分離しています。
 
-1. **Domain (Core):** Pure Python logic. No external dependencies. Contains the S-A* algorithm, entities, and scoring rules.
-2. **Application (Use Cases):** Orchestrates the flow using abstract interfaces (Ports), depends only on the Domain and the port interfaces, never on concrete infrastructure.
-3. **Infrastructure (Adapters):** Real-world implementations (OSMnx graph loading, NetworkX traversal, later PostGIS persistence and a FastAPI entrypoint).
+1. **Domain (Core / ドメイン核):** Pure Python logic. No external dependencies. Contains the S-A* algorithm, entities, and scoring rules.
+2. **Application (Ports / ポート):** Orchestrates the flow using abstract interfaces (Ports), depends only on the Domain and the port interfaces, never on concrete infrastructure.
+3. **Infrastructure (Outside / 外部):** Real-world implementations (OSMnx graph loading, NetworkX traversal, later PostGIS persistence and a FastAPI entrypoint).
 
 ```mermaid
 graph TD
-    subgraph "Infrastructure (Outside / 外部)"
+    subgraph Infrastructure["Infrastructure (Outside)"]
         A[FastAPI / CLI]
         B[PostGIS / SQLAlchemy]
         C[OSMnx / NetworkX]
     end
-    subgraph "Application (Ports / ポート)"
+    subgraph Application["Application (Ports)"]
         D[IRouteService]
         E[IGraphRepository]
         F[IScenicDataProvider]
     end
-    subgraph "Domain (Inside/Core / ドメイン核)"
+    subgraph Domain["Domain (Core)"]
         G[Scenic A* Algorithm]
         H[Entities: Node, Edge, Route]
         I[Scoring Logic]
