@@ -9,6 +9,7 @@ TEST_PAIRS = [
     ("Kiyomizu-dera to Yasaka Shrine", (34.9949, 135.7850), (35.0038, 135.7788)),
     ("Kiyomizu-dera to Kodai-ji", (34.9949, 135.7850), (35.0028, 135.7795)),
     ("Yasaka Shrine to Chion-in", (35.0038, 135.7788), (35.0053, 135.7830)),
+    ("Kiyomizu-dera to Nanzen-ji", (34.9949, 135.7850), (35.0114, 135.7935)),
 ]
 
 # The scenic penalty ranges from 1.0 (no discount, far from anything scenic)
@@ -33,6 +34,19 @@ POI_TYPE_WEIGHTS = {
 }
 DEFAULT_POI_WEIGHT = 0.5
 
+# Penalty multiplier for busy/unattractive road types, based on OSM's `highway` tag.
+# Factor > 1.0 makes these edges more "expensive" in the scenic-weighted cost,
+# discouraging routes that pass through car-heavy arterial roads.
+BUSY_ROAD_PENALTIES = {
+    "trunk": 1.6,
+    "trunk_link": 1.5,
+    "primary": 1.5,
+    "primary_link": 1.4,
+    "secondary": 1.3,
+    "secondary_link": 1.25,
+}
+DEFAULT_ROAD_PENALTY = 1.0  # neutral: no penalty, no discount
+
 
 def get_scenic_points(place):
     """Fetch temples, shrines, parks, and attractions from OSM as scenic reference points."""
@@ -55,7 +69,8 @@ def get_poi_weight(row):
         if value in POI_TYPE_WEIGHTS:
             return POI_TYPE_WEIGHTS[value]
 
-    # Fallback: Japanese temples/shrines are commonly tagged by religion even when the primary category tags vary between data contributors.
+    # Fallback: Japanese temples/shrines are commonly tagged by religion even when
+    # the primary category tags vary between data contributors.
     if row.get("religion") in ("buddhist", "shinto"):
         return 1.0
 
@@ -97,6 +112,23 @@ def compute_scenic_penalty(edge_midpoint_lat, edge_midpoint_lon, tree, weights, 
     return 1.0 - (proximity * MAX_SCENIC_DISCOUNT)
 
 
+def get_road_penalty(edge_data):
+    """
+    Look up the busy-road penalty for an edge based on its OSM `highway` tag.
+    OSMnx sometimes stores `highway` as a list (when an edge has multiple tags);
+    in that case, use the most severe (highest) penalty among them.
+    """
+    highway = edge_data.get("highway")
+    if highway is None:
+        return DEFAULT_ROAD_PENALTY
+
+    if isinstance(highway, list):
+        penalties = [BUSY_ROAD_PENALTIES.get(h, DEFAULT_ROAD_PENALTY) for h in highway]
+        return max(penalties)
+
+    return BUSY_ROAD_PENALTIES.get(highway, DEFAULT_ROAD_PENALTY)
+
+
 def make_edge_weight_fn(graph, tree, weights):
     """Returns a function networkx can use as an edge-weight during A*."""
     def weight_fn(u, v, data):
@@ -104,16 +136,20 @@ def make_edge_weight_fn(graph, tree, weights):
         u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
         v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
         mid_lat, mid_lon = (u_lat + v_lat) / 2, (u_lon + v_lon) / 2
-        penalty = compute_scenic_penalty(mid_lat, mid_lon, tree, weights)
-        return length * penalty
+
+        scenic_penalty = compute_scenic_penalty(mid_lat, mid_lon, tree, weights)
+        road_penalty = get_road_penalty(data)
+
+        return length * scenic_penalty * road_penalty
     return weight_fn
 
 
 def make_heuristic_fn(graph, best_case_penalty=BEST_CASE_SCENIC_PENALTY):
     """
     Heuristic for A*: straight-line distance (in meters, via great_circle) scaled by
-    the best possible penalty, so the heuristic never overestimates the actual
-    scenic-weighted cost (remains admissible).
+    the best-case scenic multiplier (BEST_CASE_SCENIC_PENALTY) and the best-case
+    road multiplier (1.0, i.e. a neutral road with no busy-road penalty), so the
+    heuristic never overestimates the actual scenic- and road-weighted cost.
     """
     def heuristic_fn(u, v):
         u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
