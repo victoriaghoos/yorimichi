@@ -69,10 +69,12 @@ def get_poi_weight(row):
         if value in POI_TYPE_WEIGHTS:
             return POI_TYPE_WEIGHTS[value]
 
-    # Fallback: Japanese temples/shrines are commonly tagged by religion even when
-    # the primary category tags vary between data contributors.
     if row.get("religion") in ("buddhist", "shinto"):
         return 1.0
+
+    # General notability signal: a Wikipedia/Wikidata link
+    if row.get("wikipedia") is not None or row.get("wikidata") is not None:
+        return 0.9
 
     return DEFAULT_POI_WEIGHT
 
