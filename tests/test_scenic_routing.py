@@ -4,12 +4,14 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent / "scripts"))
 
 import networkx as nx
+import numpy as np
 import pytest
 from prototype_route import (
+    BEST_CASE_SCENIC_PENALTY,
     compute_scenic_penalty,
+    get_poi_weight,
     make_edge_weight_fn,
     make_heuristic_fn,
-    BEST_CASE_SCENIC_PENALTY,
 )
 
 
@@ -75,7 +77,8 @@ def test_heuristic_never_overestimates_actual_cost(simple_graph, orig, dest):
     If this fails, A* is not guaranteed to find the true optimal scenic route.
     """
     tree = FakeTree(fixed_distance=0.01)  # far from scenic point
-    weight_fn = make_edge_weight_fn(simple_graph, tree)
+    weights = np.array([1.0])
+    weight_fn = make_edge_weight_fn(simple_graph, tree, weights)
     heuristic_fn = make_heuristic_fn(simple_graph, best_case_penalty=BEST_CASE_SCENIC_PENALTY)
 
     actual_path = nx.astar_path(simple_graph, orig, dest, heuristic=heuristic_fn, weight=weight_fn)
@@ -98,7 +101,8 @@ def test_scenic_route_produces_valid_connected_path(simple_graph):
     produce a valid, fully connected route from origin to destination.
     """
     tree = FakeTree(fixed_distance=0.0)  # very close to a scenic point
-    weight_fn = make_edge_weight_fn(simple_graph, tree)
+    weights = np.array([1.0])
+    weight_fn = make_edge_weight_fn(simple_graph, tree, weights)
     heuristic_fn = make_heuristic_fn(simple_graph)
 
     route = nx.astar_path(simple_graph, 1, 4, heuristic=heuristic_fn, weight=weight_fn)
@@ -129,7 +133,8 @@ def test_scenic_route_diverges_from_shortest_path_when_incentivized(asymmetric_g
     }
     tree = FakeTree(distance_map=distance_map, fixed_distance=0.01)
 
-    weight_fn = make_edge_weight_fn(asymmetric_graph, tree)
+    weights = np.array([1.0])
+    weight_fn = make_edge_weight_fn(asymmetric_graph, tree, weights)
     heuristic_fn = make_heuristic_fn(asymmetric_graph)
 
     scenic_route = nx.astar_path(asymmetric_graph, 1, 4, heuristic=heuristic_fn, weight=weight_fn)
@@ -143,9 +148,10 @@ def test_scenic_penalty_decreases_with_proximity():
     """Points closer to scenic locations should get a lower (more favorable) penalty factor."""
     close_tree = FakeTree(fixed_distance=0.0)
     far_tree = FakeTree(fixed_distance=0.01)
+    weights = np.array([1.0])
 
-    close_penalty = compute_scenic_penalty(35.0, 135.0, close_tree)
-    far_penalty = compute_scenic_penalty(35.0, 135.0, far_tree)
+    close_penalty = compute_scenic_penalty(35.0, 135.0, close_tree, weights)
+    far_penalty = compute_scenic_penalty(35.0, 135.0, far_tree, weights)
 
     assert close_penalty < far_penalty
 
@@ -153,12 +159,27 @@ def test_scenic_penalty_decreases_with_proximity():
 def test_scenic_penalty_stays_within_expected_bounds():
     close_tree = FakeTree(fixed_distance=0.0)
     far_tree = FakeTree(fixed_distance=1.0)
+    weights = np.array([1.0])
 
-    close_penalty = compute_scenic_penalty(35.0, 135.0, close_tree)
-    far_penalty = compute_scenic_penalty(35.0, 135.0, far_tree)
+    close_penalty = compute_scenic_penalty(35.0, 135.0, close_tree, weights)
+    far_penalty = compute_scenic_penalty(35.0, 135.0, far_tree, weights)
 
     assert BEST_CASE_SCENIC_PENALTY <= close_penalty <= 1.0
     assert BEST_CASE_SCENIC_PENALTY <= far_penalty <= 1.0
+
+
+def test_higher_weight_poi_gets_stronger_discount_at_same_distance():
+    """A higher POI weight (e.g., temple) should yield a lower penalty than attraction at equal distance."""
+    tree = FakeTree(fixed_distance=0.001)
+
+    temple_weight = get_poi_weight({"historic": "temple"})
+    attraction_weight = get_poi_weight({"tourism": "attraction"})
+
+    temple_penalty = compute_scenic_penalty(35.0, 135.0, tree, np.array([temple_weight]))
+    attraction_penalty = compute_scenic_penalty(35.0, 135.0, tree, np.array([attraction_weight]))
+
+    assert temple_weight > attraction_weight
+    assert temple_penalty < attraction_penalty
 
 
 # TODO(phase-1.5): add edge-case tests for orig==dest, disconnected graphs, and empty scenic datasets.
