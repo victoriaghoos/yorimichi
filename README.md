@@ -97,7 +97,7 @@ graph TD
 
 Built incrementally, proving the core idea before adding infrastructure complexity:
 
-- [ ] **Phase 1 — Core Algorithm:** S-A* implemented and tested against plain A* on an in-memory OSMnx/NetworkX graph of Higashiyama, with a first-pass scoring heuristic.
+- [x] **Phase 1 — Core Algorithm:** S-A* implemented and tested against plain A* on an in-memory OSMnx/NetworkX graph of Higashiyama, with a first-pass scoring heuristic.
 - [ ] **Phase 2 — Real Scenic Scoring:** Scoring logic based on OSM POI tags (temples, shrines, parks) and/or curated scenic edges.
 - [ ] **Phase 3 — Hexagonal Wiring:** Full Domain / Application / Infrastructure separation with the in-memory adapter as the first concrete `IGraphRepository`.
 - [ ] **Phase 4 — API Layer:** FastAPI adapter exposing a `/route` endpoint.
