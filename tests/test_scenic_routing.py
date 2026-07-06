@@ -8,8 +8,10 @@ import numpy as np
 import pytest
 from prototype_route import (
     BEST_CASE_SCENIC_PENALTY,
+    BUSY_ROAD_PENALTIES,
     compute_scenic_penalty,
     get_poi_weight,
+    get_road_penalty,
     make_edge_weight_fn,
     make_heuristic_fn,
 )
@@ -53,6 +55,32 @@ def asymmetric_graph():
     for u, v in long_path_edges:
         G.add_edge(u, v, length=100)
         G.add_edge(v, u, length=100)
+    return G
+
+
+@pytest.fixture
+def graph_with_busy_road():
+    """
+    Two routes between the same endpoints: 1->2->4 is shorter (180m) but crosses
+    a primary road; 1->3->4 is longer (200m) but stays on residential streets.
+    Isolates the busy-road penalty from the scenic-discount mechanism, since no
+    scenic points are involved here.
+    """
+    G = nx.MultiDiGraph()
+    G.add_node(1, y=35.000, x=135.000)
+    G.add_node(2, y=35.001, x=135.000)
+    G.add_node(3, y=35.000, x=135.002)
+    G.add_node(4, y=35.001, x=135.002)
+
+    G.add_edge(1, 2, length=90, highway="primary")
+    G.add_edge(2, 1, length=90, highway="primary")
+    G.add_edge(2, 4, length=90, highway="primary")
+    G.add_edge(4, 2, length=90, highway="primary")
+
+    G.add_edge(1, 3, length=100, highway="residential")
+    G.add_edge(3, 1, length=100, highway="residential")
+    G.add_edge(3, 4, length=100, highway="residential")
+    G.add_edge(4, 3, length=100, highway="residential")
     return G
 
 
@@ -122,8 +150,6 @@ def test_scenic_route_diverges_from_shortest_path_when_incentivized(asymmetric_g
     baseline_route = nx.shortest_path(asymmetric_graph, 1, 4, weight="length")
     assert baseline_route == [1, 2, 4], "Baseline should always prefer the physically shorter route"
 
-    # Make the midpoint of the long route (near node 3) very scenic (distance 0.0),
-    # and the midpoint of the short route (near node 2) not scenic at all (distance far).
     node_2_mid = (round((35.000 + 35.001) / 2, 4), round((135.000 + 135.000) / 2, 4))
     node_3_mid = (round((35.000 + 35.001) / 2, 4), round((135.002 + 135.002) / 2, 4))
 
@@ -180,6 +206,40 @@ def test_higher_weight_poi_gets_stronger_discount_at_same_distance():
 
     assert temple_weight > attraction_weight
     assert temple_penalty < attraction_penalty
+
+
+def test_busy_road_increases_edge_cost():
+    """A busy road (e.g. primary) should cost more than a neutral road at the same length."""
+    neutral_edge = {"length": 100}
+    busy_edge = {"length": 100, "highway": "primary"}
+
+    assert get_road_penalty(neutral_edge) == 1.0
+    assert get_road_penalty(busy_edge) > 1.0
+
+
+def test_busy_road_penalty_uses_worst_case_for_multiple_tags():
+    """When an edge has multiple highway tags, the most severe penalty should apply."""
+    mixed_edge = {"length": 100, "highway": ["residential", "trunk"]}
+    assert get_road_penalty(mixed_edge) == BUSY_ROAD_PENALTIES["trunk"]
+
+
+def test_scenic_route_avoids_busy_road_when_alternative_exists(graph_with_busy_road):
+    """
+    Even when the primary-road route is physically shorter, S-A* should prefer
+    the longer residential-street route due to the busy-road penalty. This test
+    isolates the road-penalty mechanism from scenic discounting (no scenic
+    points are involved), complementing the real-world confirmation found on
+    the Kiyomizu-dera to Nanzen-ji route.
+    """
+    tree = FakeTree(fixed_distance=0.01)  # no meaningful scenic influence either way
+    weights = np.array([1.0])
+
+    weight_fn = make_edge_weight_fn(graph_with_busy_road, tree, weights)
+    heuristic_fn = make_heuristic_fn(graph_with_busy_road)
+
+    route = nx.astar_path(graph_with_busy_road, 1, 4, heuristic=heuristic_fn, weight=weight_fn)
+
+    assert route == [1, 3, 4], f"Expected S-A* to avoid the primary road, got {route}"
 
 
 # TODO(phase-1.5): add edge-case tests for orig==dest, disconnected graphs, and empty scenic datasets.
