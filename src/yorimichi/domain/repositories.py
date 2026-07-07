@@ -5,7 +5,7 @@ data structures (KD-trees, GeoDataFrames, etc.) used to compute them.
 
 from abc import ABC, abstractmethod
 
-from yorimichi.domain.entities import Node
+from yorimichi.domain.entities import Node, Route
 
 
 class IGraphRepository(ABC):
@@ -23,6 +23,16 @@ class IGraphRepository(ABC):
     @abstractmethod
     def nearest_node(self, graph, lat: float, lon: float) -> Node:
         """Returns the graph node nearest to the given coordinates, as a Domain Node."""
+        raise NotImplementedError
+    
+    @abstractmethod
+    def find_shortest_route(self, graph, orig: Node, dest: Node) -> Route:
+        """Returns the shortest route (by raw distance) between two nodes."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_scenic_route(self, graph, orig: Node, dest: Node, scenic_provider) -> Route:
+        """Returns the scenic (S-A*) route between two nodes."""
         raise NotImplementedError
 
 
