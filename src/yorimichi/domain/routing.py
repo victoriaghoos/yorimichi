@@ -1,15 +1,12 @@
 """
-Domain-layer S-A* routing logic. Builds the edge-weight and heuristic
-functions used by networkx's astar_path: these encode the core scenic
-routing algorithm and its admissibility guarantee.
-
-Zero external infrastructure dependencies (no osmnx import): great-circle
-distance is computed directly via the Haversine formula, so this module can
-be unit-tested without installing the full geospatial stack.
+Domain-layer S-A* routing logic. Pure business logic operating exclusively
+on Node/Edge entities: zero knowledge of networkx, osmnx, or any external
+graph library.
 """
 
 import math
 
+from yorimichi.domain.entities import Node, Edge
 from yorimichi.domain.scoring import (
     compute_scenic_penalty,
     get_road_penalty,
@@ -19,12 +16,8 @@ from yorimichi.domain.scoring import (
 EARTH_RADIUS_METERS = 6_371_000
 
 
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    Great-circle distance between two lat/lon points, in meters, using the
-    Haversine formula. Replaces osmnx.distance.great_circle() so the Domain
-    layer has zero dependency on external geospatial libraries.
-    """
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance between two lat/lon points, in meters."""
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
@@ -34,36 +27,28 @@ def haversine_distance(lat1, lon1, lat2, lon2):
         + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
     )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
     return EARTH_RADIUS_METERS * c
 
 
-def make_edge_weight_fn(graph, tree, weights):
-    """Returns a function networkx can use as an edge-weight during A*."""
-    def weight_fn(u, v, data):
-        length = data.get("length", 1.0)
-        u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
-        v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
-        mid_lat, mid_lon = (u_lat + v_lat) / 2, (u_lon + v_lon) / 2
-
-        scenic_penalty = compute_scenic_penalty(mid_lat, mid_lon, tree, weights)
-        road_penalty = get_road_penalty(data)
-
-        return length * scenic_penalty * road_penalty
-    return weight_fn
-
-
-def make_heuristic_fn(graph, best_case_penalty=BEST_CASE_SCENIC_PENALTY):
+def calculate_edge_cost(edge: Edge, tree, weights) -> float:
     """
-    Heuristic for A*: straight-line distance (in meters, via Haversine formula)
-    scaled by the best-case scenic multiplier (BEST_CASE_SCENIC_PENALTY) and the
-    best-case road multiplier (1.0, i.e. a neutral road with no busy-road
-    penalty), so the heuristic never overestimates the actual scenic- and
-    road-weighted cost.
+    Pure domain calculation of an edge's scenic- and road-weighted cost.
+    Takes only a domain Edge (which itself holds Node references): no
+    networkx (u, v, data) in here.
     """
-    def heuristic_fn(u, v):
-        u_lat, u_lon = graph.nodes[u]["y"], graph.nodes[u]["x"]
-        v_lat, v_lon = graph.nodes[v]["y"], graph.nodes[v]["x"]
-        straight_line_dist = haversine_distance(u_lat, u_lon, v_lat, v_lon)
-        return straight_line_dist * best_case_penalty
-    return heuristic_fn
+    mid_lat = (edge.from_node.lat + edge.to_node.lat) / 2
+    mid_lon = (edge.from_node.lon + edge.to_node.lon) / 2
+
+    scenic_penalty = compute_scenic_penalty(mid_lat, mid_lon, tree, weights)
+    road_penalty = get_road_penalty({"highway": edge.highway_tag})
+
+    return edge.length * scenic_penalty * road_penalty
+
+
+def calculate_heuristic(from_node: Node, to_node: Node, best_case_penalty: float = BEST_CASE_SCENIC_PENALTY) -> float:
+    """
+    Admissible heuristic: straight-line distance scaled by the best-case
+    scenic multiplier, so it never overestimates the true remaining cost.
+    """
+    straight_line_dist = haversine_distance(from_node.lat, from_node.lon, to_node.lat, to_node.lon)
+    return straight_line_dist * best_case_penalty
