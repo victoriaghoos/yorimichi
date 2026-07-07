@@ -30,16 +30,16 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return EARTH_RADIUS_METERS * c
 
 
-def calculate_edge_cost(edge: Edge, tree, weights) -> float:
+def calculate_edge_cost(edge: Edge, scenic_provider) -> float:
     """
     Pure domain calculation of an edge's scenic- and road-weighted cost.
-    Takes only a domain Edge (which itself holds Node references): no
-    networkx (u, v, data) in here.
+    scenic_provider is an IScenicDataProvider: Domain asks for a penalty
+    value, never touches the underlying KD-tree/weights implementation.
     """
     mid_lat = (edge.from_node.lat + edge.to_node.lat) / 2
     mid_lon = (edge.from_node.lon + edge.to_node.lon) / 2
 
-    scenic_penalty = compute_scenic_penalty(mid_lat, mid_lon, tree, weights)
+    scenic_penalty = scenic_provider.get_scenic_penalty(mid_lat, mid_lon)
     road_penalty = get_road_penalty({"highway": edge.highway_tag})
 
     return edge.length * scenic_penalty * road_penalty
