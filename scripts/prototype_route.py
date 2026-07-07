@@ -4,11 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 
-from yorimichi.domain.scoring import (
-    get_poi_weight
-)
-
 from yorimichi.infrastructure.osmnx_routing_adapter import make_edge_weight_fn, make_heuristic_fn
+from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
 
 PLACE = "Higashiyama Ward, Kyoto, Japan"
 
@@ -20,45 +17,7 @@ TEST_PAIRS = [
 ]
 
 
-def get_scenic_points(place):
-    """
-    Fetch a broad set of OSM features that could plausibly be scenic. `historic`
-    is queried broadly (all values) since scenic-relevant historic tags vary too
-    much across regions/contributors to enumerate exhaustively upfront — see
-    yorimichi.domain.scoring for how the resulting noise is filtered and weighted.
-    """
-    tags = {
-        "historic": True,
-        "amenity": ["place_of_worship"],
-        "leisure": ["park", "garden"],
-        "tourism": ["attraction", "viewpoint"],
-        "building": ["temple"],
-    }
-    scenic_gdf = ox.features_from_place(place, tags)
-    print(f"Found {len(scenic_gdf)} scenic points")
-    return scenic_gdf
-
-
-def build_scenic_lookup(scenic_gdf):
-    """
-    Build a fast nearest-neighbor lookup (KD-tree) for scenic points, along with
-    a parallel array of per-point weights (indexed the same as the tree's points).
-
-    Coordinates are stored and queried in degrees (lat/lon), not meters:
-    see compute_scenic_penalty's max_influence_dist_degrees parameter.
-    """
-    projected = ox.projection.project_gdf(scenic_gdf)
-    centroids_projected = projected.geometry.centroid
-    centroids = centroids_projected.to_crs(scenic_gdf.crs)
-    coords = np.array([[pt.y, pt.x] for pt in centroids])
-
-    weights = np.array([get_poi_weight(row) for _, row in scenic_gdf.iterrows()])
-
-    tree = cKDTree(coords)
-    return tree, weights
-
-
-def compute_route(graph, tree, weights, orig_point, dest_point):
+def compute_route(graph, scenic_provider, orig_point, dest_point):
     """Compute both the baseline (shortest) and scenic (S-A*) routes for a coordinate pair."""
     orig_node = ox.nearest_nodes(graph, orig_point[1], orig_point[0])
     dest_node = ox.nearest_nodes(graph, dest_point[1], dest_point[0])
@@ -66,7 +25,7 @@ def compute_route(graph, tree, weights, orig_point, dest_point):
     baseline_route = nx.shortest_path(graph, orig_node, dest_node, weight="length")
     baseline_length = nx.shortest_path_length(graph, orig_node, dest_node, weight="length")
 
-    weight_fn = make_edge_weight_fn(graph, tree, weights)
+    weight_fn = make_edge_weight_fn(graph, scenic_provider)
     heuristic_fn = make_heuristic_fn(graph)
     scenic_route = nx.astar_path(graph, orig_node, dest_node, heuristic=heuristic_fn, weight=weight_fn)
     scenic_length = sum(
@@ -80,7 +39,6 @@ def compute_route(graph, tree, weights, orig_point, dest_point):
         "scenic_route": scenic_route,
         "scenic_length": scenic_length,
     }
-
 
 def print_route_comparison(label, result):
     diff = result["scenic_length"] - result["baseline_length"]
@@ -125,13 +83,13 @@ def main():
     graph = ox.graph_from_place(PLACE, network_type="walk")
     print(f"Nodes: {len(graph.nodes)}, Edges: {len(graph.edges)}")
 
-    scenic_points = get_scenic_points(PLACE)
-    tree, weights = build_scenic_lookup(scenic_points)
+    scenic_provider = OSMnxScenicDataProvider()
+    scenic_provider.load(PLACE)
 
     print("\nComparing baseline vs scenic routes across multiple point pairs:")
     results = {}
     for label, orig_point, dest_point in TEST_PAIRS:
-        result = compute_route(graph, tree, weights, orig_point, dest_point)
+        result = compute_route(graph, scenic_provider, orig_point, dest_point)
         print_route_comparison(label, result)
         results[label] = result
 
