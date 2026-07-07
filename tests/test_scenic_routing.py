@@ -6,17 +6,20 @@ sys.path.append(str(Path(__file__).parent.parent / "scripts"))
 import networkx as nx
 import numpy as np
 import pytest
-from prototype_route import (
+
+from yorimichi.domain.scoring import (
     BEST_CASE_SCENIC_PENALTY,
     BUSY_ROAD_PENALTIES,
     DEFAULT_POI_WEIGHT,
     compute_scenic_penalty,
     get_poi_weight,
     get_road_penalty,
+)
+
+from prototype_route import (
     make_edge_weight_fn,
     make_heuristic_fn,
 )
-
 
 @pytest.fixture
 def simple_graph():
