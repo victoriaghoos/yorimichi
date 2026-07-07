@@ -59,7 +59,11 @@ $$f(n) = g(n) + h(n)$$
 
 ## ⚠️ Known Limitation: Scenic Tag Coverage
 
-Scenic scoring currently relies on a **curated, hand-picked set of OSM tags** (e.g. `historic=temple`, `amenity=place_of_worship`, `leisure=park`). Real-world OpenStreetMap tagging is crowd-sourced and inconsistent, during development, genuine scenic points were initially missed because they were tagged as `historic=wayside_shrine` or `building=temple` rather than the more "obvious" tags first assumed. A `wikipedia`/`wikidata`-link fallback was added to catch some of these gaps, but **no finite hardcoded tag list can ever be fully complete.** This is tracked as a deliberate next step (Phase 2.5) rather than treated as solved.
+Scenic scoring initially relied on a **curated, hand-picked set of OSM tags** (e.g. `historic=temple`, `amenity=place_of_worship`, `leisure=park`). Real-world OpenStreetMap tagging is crowd-sourced and inconsistent, during development, genuine scenic points were initially missed because they were tagged as `historic=wayside_shrine` or `building=temple` rather than the more "obvious" tags first assumed.
+
+To address this (Phase 2.5), `historic` is now queried **broadly** (`historic=True`, all values) rather than a fixed list, with filtering and category-weighting happening afterward, validated against real Higashiyama data (603 → 1206 scenic points found once broadened). This also surfaced a genuine, unanticipated finding: `historic=memorial` turned out to be the single most common tag in this district (363 occurrences), likely reflecting small religious/cultural markers tied to nearby temple and shrine grounds specific to this cultural context. This is a concrete, early signal that scenic scoring will need **region-configurable weighting profiles** at larger scale (see *Future Vision*) rather than a single hardcoded weight table, a "memorial" carries different scenic connotations in Japan than it might in, say, Belgium.
+
+A `wikipedia`/`wikidata`-link fallback also catches some category gaps regardless of region, but **no tagging strategy can ever be considered fully complete**, this remains an area for ongoing refinement rather than a solved problem.
 
 ---
 
@@ -68,7 +72,9 @@ Currently scoped to Higashiyama, Kyoto as a proof of concept. The architecture
 is designed to eventually scale to all of Kyoto, then Japan more broadly, and 
 potentially other regions (e.g. Belgium), requiring PostGIS-backed persistence 
 (Phase 5) and region-configurable scenic scoring profiles rather than hardcoded 
-Japan-specific logic (e.g. religion=buddhist/shinto).
+Japan-specific logic (e.g. religion=buddhist/shinto, or category weights tuned 
+for one cultural context — see *Known Limitation* above for a concrete example 
+of this surfacing already during Higashiyama-only development).
 
 ---
 
@@ -113,11 +119,15 @@ graph TD
 
 Built incrementally, proving the core idea before adding infrastructure complexity:
 
+## 🚧 Roadmap / Status
+
+Built incrementally, proving the core idea before adding infrastructure complexity:
+
 - [x] **Phase 1: Core Algorithm:** S-A* implemented and tested against plain A* on an in-memory OSMnx/NetworkX graph of Higashiyama, with an admissible scoring heuristic (parametrized correctness tests).
 - [x] **Phase 2: Real Scenic Scoring:**
     - [x] Proximity-based discount for scenic OSM POIs, weighted by category (temples/shrines > generic attractions)
     - [x] Penalty (>1.0 multiplier) for busy/unattractive road types (`primary`/`trunk`/`secondary`), validated against real Higashiyama routes and deterministic synthetic tests
-- [ ] **Phase 2.5: Broaden scenic tag coverage:** Query OSM more broadly (any `amenity`/`historic`/`tourism`/`building` tag, not a fixed list) and filter/weight results afterward, rather than relying on a hand-curated tag list that risks missing real scenic points — see *Known Limitation* above.
+- [x] **Phase 2.5: Broaden scenic tag coverage:** Queried OSM more broadly (`historic=True` instead of a fixed list), filtered/weighted afterward. Validated on Higashiyama: 603 → 1206 scenic points found. Surfaced a concrete, region-specific scoring nuance (`historic=memorial` unexpectedly dominant here) — see *Known Limitation*.
 - [ ] **Phase 3: Hexagonal Wiring:** Full Domain / Application / Infrastructure separation with the in-memory adapter as the first concrete `IGraphRepository`.
 - [ ] **Phase 4: API Layer:** FastAPI adapter exposing a `/route` endpoint.
 - [ ] **Phase 5: Persistence:** PostGIS-backed `IGraphRepository` adapter, swapped in without touching the Domain or Application layers — the real proof that the architecture holds.
