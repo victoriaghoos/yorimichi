@@ -22,17 +22,40 @@ BEST_CASE_SCENIC_PENALTY = 1.0 - MAX_SCENIC_DISCOUNT
 # Weight per scenic category: a temple/shrine matters more than a generic "attraction" tag.
 # Higher weight = stronger scenic pull (bigger discount when nearby).
 POI_TYPE_WEIGHTS = {
+    # Religious / sacred sites
     "temple": 1.0,
     "shrine": 1.0,
     "wayside_shrine": 1.0,
-    "monument": 0.8,
     "place_of_worship": 0.9,
+    "monastery": 0.9,
+    "church": 0.85,
+    "wayside_chapel": 0.7,
+    "wayside_cross": 0.7,
+
+    # Historic structures / landmarks
+    "castle": 0.9,
+    "heritage": 0.85,
+    "manor": 0.8,
+    "monument": 0.8,
+    "city_gate": 0.75,
+    "citywalls": 0.7,
+    "tower": 0.75,
+    "archaeological_site": 0.7,
+    "ruins": 0.7,
+    "fort": 0.7,
+    "bridge": 0.65,
+
+    # Nature / leisure
     "park": 0.6,
     "garden": 0.7,
     "attraction": 0.5,
     "viewpoint": 0.6,
+
+    # Lower-confidence / generic
+    "memorial": 0.65,
+    "house": 0.4,
 }
-DEFAULT_POI_WEIGHT = 0.5
+DEFAULT_POI_WEIGHT = 0.4  # lowered slightly, since we now cast a wider net with `historic: True`
 
 # Penalty multiplier for busy/unattractive road types, based on OSM's `highway` tag.
 # Factor > 1.0 makes these edges more "expensive" in the scenic-weighted cost,
@@ -49,13 +72,19 @@ DEFAULT_ROAD_PENALTY = 1.0  # neutral: no penalty, no discount
 
 
 def get_scenic_points(place):
-    """Fetch temples, shrines, parks, and attractions from OSM as scenic reference points."""
+    """
+    Fetch a broad set of OSM features that could plausibly be scenic. `historic`
+    is queried broadly (all values) since scenic-relevant historic tags vary too
+    much across regions/contributors to enumerate exhaustively upfront — see
+    POI_TYPE_WEIGHTS and get_poi_weight for how the resulting noise is filtered
+    and weighted afterward.
+    """
     tags = {
+        "historic": True,
         "amenity": ["place_of_worship"],
-        "historic": ["temple", "shrine", "monument"],
-        "building": ["temple"],
         "leisure": ["park", "garden"],
         "tourism": ["attraction", "viewpoint"],
+        "building": ["temple"],
     }
     scenic_gdf = ox.features_from_place(place, tags)
     print(f"Found {len(scenic_gdf)} scenic points")
@@ -192,6 +221,36 @@ def print_route_comparison(label, result):
         f"scenic={result['scenic_length']:.1f}m, diff={diff:+.1f}m"
     )
 
+def plot_route_comparison(graph, result, label, scenic_points=None):
+    """
+    Plot baseline vs scenic route for a single pair, zoomed to the relevant area
+    with a legend, so the divergence is clearly visible without extra context.
+    """
+    fig, ax = ox.plot_graph_routes(
+        graph,
+        [result["baseline_route"], result["scenic_route"]],
+        route_colors=["red", "gold"],
+        route_linewidths=3,
+        node_size=0,
+        show=False,
+        close=False,
+    )
+
+    # Zoom to a bounding box around the combined route, with a small margin
+    all_route_nodes = set(result["baseline_route"]) | set(result["scenic_route"])
+    lats = [graph.nodes[n]["y"] for n in all_route_nodes]
+    lons = [graph.nodes[n]["x"] for n in all_route_nodes]
+    margin = 0.002  # roughly 200m padding
+    ax.set_xlim(min(lons) - margin, max(lons) + margin)
+    ax.set_ylim(min(lats) - margin, max(lats) + margin)
+
+    # Legend
+    ax.plot([], [], color="red", linewidth=3, label="Shortest route")
+    ax.plot([], [], color="gold", linewidth=3, label="Scenic route (S-A*)")
+    ax.legend(loc="lower right", facecolor="black", labelcolor="white", framealpha=0.8)
+
+    ax.set_title(label, color="white", fontsize=12)
+    return fig, ax
 
 def main():
     print(f"Fetching graph for: {PLACE}")
@@ -208,17 +267,11 @@ def main():
         print_route_comparison(label, result)
         results[label] = result
 
-    # Visualize the first pair as a representative example
-    first_label = TEST_PAIRS[0][0]
-    first_result = results[first_label]
-    ox.plot_graph_routes(
-        graph,
-        [first_result["baseline_route"], first_result["scenic_route"]],
-        route_colors=["red", "gold"],
-        route_linewidths=3,
-        node_size=0,
-    )
+    for label, result in results.items():
+        plot_route_comparison(graph, result, label)
 
+    import matplotlib.pyplot as plt
+    plt.show()
 
 if __name__ == "__main__":
     main()
