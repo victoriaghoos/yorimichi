@@ -16,7 +16,7 @@ from yorimichi.domain.scoring import (
     get_road_penalty,
 )
 
-from prototype_route import (
+from yorimichi.domain.routing import (
     make_edge_weight_fn,
     make_heuristic_fn,
 )
