@@ -63,6 +63,15 @@ Scenic scoring currently relies on a **curated, hand-picked set of OSM tags** (e
 
 ---
 
+## 🔭 Future Vision
+Currently scoped to Higashiyama, Kyoto as a proof of concept. The architecture 
+is designed to eventually scale to all of Kyoto, then Japan more broadly, and 
+potentially other regions (e.g. Belgium), requiring PostGIS-backed persistence 
+(Phase 5) and region-configurable scenic scoring profiles rather than hardcoded 
+Japan-specific logic (e.g. religion=buddhist/shinto).
+
+---
+
 ## 🏗️ Architecture / アーキテクチャ
 
 This project follows a **Hexagonal Architecture (Ports & Adapters)** to ensure the business logic remains fully decoupled from external technologies like PostGIS, OSMnx, or FastAPI.
