@@ -13,10 +13,14 @@ class Node:
     lat: float
     lon: float
 
-
 @dataclass(frozen=True)
 class Edge:
     from_node: Node
     to_node: Node
     length: float
     highway_tag: str | list[str] | None = None
+    
+@dataclass(frozen=True)
+class Route:
+    node_ids: tuple[str, ...]
+    length: float
