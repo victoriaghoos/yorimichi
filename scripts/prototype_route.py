@@ -6,6 +6,7 @@ from scipy.spatial import cKDTree
 
 from yorimichi.infrastructure.osmnx_routing_adapter import make_edge_weight_fn, make_heuristic_fn
 from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
+from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
 
 PLACE = "Higashiyama Ward, Kyoto, Japan"
 
@@ -17,10 +18,12 @@ TEST_PAIRS = [
 ]
 
 
-def compute_route(graph, scenic_provider, orig_point, dest_point):
+def compute_route(graph, graph_repo, scenic_provider, orig_point, dest_point):
     """Compute both the baseline (shortest) and scenic (S-A*) routes for a coordinate pair."""
-    orig_node = ox.nearest_nodes(graph, orig_point[1], orig_point[0])
-    dest_node = ox.nearest_nodes(graph, dest_point[1], dest_point[0])
+    orig_domain_node = graph_repo.nearest_node(graph, orig_point[0], orig_point[1])
+    dest_domain_node = graph_repo.nearest_node(graph, dest_point[0], dest_point[1])
+    orig_node = int(orig_domain_node.id)
+    dest_node = int(dest_domain_node.id)
 
     baseline_route = nx.shortest_path(graph, orig_node, dest_node, weight="length")
     baseline_length = nx.shortest_path_length(graph, orig_node, dest_node, weight="length")
@@ -39,6 +42,7 @@ def compute_route(graph, scenic_provider, orig_point, dest_point):
         "scenic_route": scenic_route,
         "scenic_length": scenic_length,
     }
+
 
 def print_route_comparison(label, result):
     diff = result["scenic_length"] - result["baseline_length"]
@@ -80,7 +84,8 @@ def plot_route_comparison(graph, result, label):
 
 def main():
     print(f"Fetching graph for: {PLACE}")
-    graph = ox.graph_from_place(PLACE, network_type="walk")
+    graph_repo = OSMnxGraphRepository()
+    graph = graph_repo.get_graph(PLACE)
     print(f"Nodes: {len(graph.nodes)}, Edges: {len(graph.edges)}")
 
     scenic_provider = OSMnxScenicDataProvider()
@@ -89,7 +94,7 @@ def main():
     print("\nComparing baseline vs scenic routes across multiple point pairs:")
     results = {}
     for label, orig_point, dest_point in TEST_PAIRS:
-        result = compute_route(graph, scenic_provider, orig_point, dest_point)
+        result = compute_route(graph, graph_repo, scenic_provider, orig_point, dest_point)
         print_route_comparison(label, result)
         results[label] = result
 
