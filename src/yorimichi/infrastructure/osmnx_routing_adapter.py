@@ -12,7 +12,7 @@ def _node_from_graph(graph, node_id) -> Node:
     return Node(id=str(node_id), lat=data["y"], lon=data["x"])
 
 
-def make_edge_weight_fn(graph, tree, weights):
+def make_edge_weight_fn(graph, scenic_provider):
     """Returns a networkx-compatible weight function, translating (u, v, data) into a Domain Edge."""
     def weight_fn(u, v, data):
         edge = Edge(
@@ -21,7 +21,7 @@ def make_edge_weight_fn(graph, tree, weights):
             length=data.get("length", 1.0),
             highway_tag=data.get("highway"),
         )
-        return calculate_edge_cost(edge, tree, weights)
+        return calculate_edge_cost(edge, scenic_provider)
     return weight_fn
 
 
