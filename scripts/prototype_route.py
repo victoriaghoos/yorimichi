@@ -8,7 +8,7 @@ from yorimichi.domain.scoring import (
     get_poi_weight
 )
 
-from yorimichi.domain.routing import make_edge_weight_fn, make_heuristic_fn
+from yorimichi.infrastructure.osmnx_routing_adapter import make_edge_weight_fn, make_heuristic_fn
 
 PLACE = "Higashiyama Ward, Kyoto, Japan"
 
