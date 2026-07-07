@@ -119,10 +119,6 @@ graph TD
 
 Built incrementally, proving the core idea before adding infrastructure complexity:
 
-## 🚧 Roadmap / Status
-
-Built incrementally, proving the core idea before adding infrastructure complexity:
-
 - [x] **Phase 1: Core Algorithm:** S-A* implemented and tested against plain A* on an in-memory OSMnx/NetworkX graph of Higashiyama, with an admissible scoring heuristic (parametrized correctness tests).
 - [x] **Phase 2: Real Scenic Scoring:**
     - [x] Proximity-based discount for scenic OSM POIs, weighted by category (temples/shrines > generic attractions)
