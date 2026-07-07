@@ -1,6 +1,7 @@
 import osmnx as ox
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 
 PLACE = "Higashiyama Ward, Kyoto, Japan"
@@ -13,13 +14,13 @@ TEST_PAIRS = [
 ]
 
 # The scenic penalty ranges from 1.0 (no discount, far from anything scenic)
-# down to (1.0 - MAX_SCENIC_DISCOUNT) at the closest possible proximity.
+# down to (1.0 - MAX_SCENIC_DISCOUNT) at the closest proximity.
 # Kept as a single named constant so the "best case" value used by the
 # heuristic can never silently drift out of sync with the actual penalty logic.
 MAX_SCENIC_DISCOUNT = 0.4
 BEST_CASE_SCENIC_PENALTY = 1.0 - MAX_SCENIC_DISCOUNT
 
-# Weight per scenic category: a temple/shrine matters more than a generic "attraction" tag.
+# High-confidence weights for specific, known-good OSM tag values.
 # Higher weight = stronger scenic pull (bigger discount when nearby).
 POI_TYPE_WEIGHTS = {
     # Religious / sacred sites
@@ -55,7 +56,28 @@ POI_TYPE_WEIGHTS = {
     "memorial": 0.65,
     "house": 0.4,
 }
-DEFAULT_POI_WEIGHT = 0.4  # lowered slightly, since we now cast a wider net with `historic: True`
+
+# OSM keys where an unlisted value is still plausibly scenic (e.g. an
+# unfamiliar historic=* value we haven't explicitly weighted yet). Values
+# under these keys that AREN'T in POI_TYPE_WEIGHTS still get a moderate
+# "probably somewhat scenic" weight rather than falling all the way to the
+# generic default: this is what protects against silently underweighting
+# real scenic points we simply haven't encountered/named yet.
+LIKELY_SCENIC_KEYS = {"historic", "tourism", "leisure"}
+LIKELY_SCENIC_FALLBACK_WEIGHT = 0.55
+
+# Values that are technically under a "likely scenic" key but are clearly
+# NOT scenic in practice: an exclusion list, so these don't accidentally
+# get the moderate fallback weight above.
+EXCLUDED_VALUES = {
+    "boundary_stone", "charcoal_pile", "shieling", "bomb_crater", "railway",
+    "mine", "mine_shaft", "milestone", "aircraft", "cannon", "wreck", "stone",
+    "hollow_way", "roman_road", "bunker", "maritime", "farm", "locomotive",
+    "grave", "naval", "military", "battlefield", "tank", "railway_car",
+    "aqueduct", "tunnel", "substation", "yes", "no",
+}
+
+DEFAULT_POI_WEIGHT = 0.4  # generic fallback for anything not covered above
 
 # Penalty multiplier for busy/unattractive road types, based on OSM's `highway` tag.
 # Factor > 1.0 makes these edges more "expensive" in the scenic-weighted cost,
@@ -75,7 +97,7 @@ def get_scenic_points(place):
     """
     Fetch a broad set of OSM features that could plausibly be scenic. `historic`
     is queried broadly (all values) since scenic-relevant historic tags vary too
-    much across regions/contributors to enumerate exhaustively upfront — see
+    much across regions/contributors to enumerate exhaustively upfront: see
     POI_TYPE_WEIGHTS and get_poi_weight for how the resulting noise is filtered
     and weighted afterward.
     """
@@ -92,11 +114,22 @@ def get_scenic_points(place):
 
 
 def get_poi_weight(row):
-    """Look up the scenic weight for a POI row based on whichever tag matched."""
+    """
+    Look up the scenic weight for a POI row. Prefers a small, curated set of
+    high-confidence weights for known categories; falls back to a moderate
+    "probably somewhat scenic" weight for unlisted-but-plausible values under
+    likely-scenic keys, rather than immediately dropping to the generic default.
+    """
     for tag_col in ("historic", "amenity", "leisure", "tourism", "building"):
         value = row.get(tag_col)
+        if value is None:
+            continue
+
         if value in POI_TYPE_WEIGHTS:
             return POI_TYPE_WEIGHTS[value]
+
+        if value not in EXCLUDED_VALUES and tag_col in LIKELY_SCENIC_KEYS:
+            return LIKELY_SCENIC_FALLBACK_WEIGHT
 
     if row.get("religion") in ("buddhist", "shinto"):
         return 1.0
@@ -221,7 +254,8 @@ def print_route_comparison(label, result):
         f"scenic={result['scenic_length']:.1f}m, diff={diff:+.1f}m"
     )
 
-def plot_route_comparison(graph, result, label, scenic_points=None):
+
+def plot_route_comparison(graph, result, label):
     """
     Plot baseline vs scenic route for a single pair, zoomed to the relevant area
     with a legend, so the divergence is clearly visible without extra context.
@@ -236,21 +270,20 @@ def plot_route_comparison(graph, result, label, scenic_points=None):
         close=False,
     )
 
-    # Zoom to a bounding box around the combined route, with a small margin
     all_route_nodes = set(result["baseline_route"]) | set(result["scenic_route"])
     lats = [graph.nodes[n]["y"] for n in all_route_nodes]
     lons = [graph.nodes[n]["x"] for n in all_route_nodes]
-    margin = 0.002  # roughly 200m padding
+    margin = 0.002  # circa 200m padding
     ax.set_xlim(min(lons) - margin, max(lons) + margin)
     ax.set_ylim(min(lats) - margin, max(lats) + margin)
 
-    # Legend
     ax.plot([], [], color="red", linewidth=3, label="Shortest route")
     ax.plot([], [], color="gold", linewidth=3, label="Scenic route (S-A*)")
     ax.legend(loc="lower right", facecolor="black", labelcolor="white", framealpha=0.8)
 
     ax.set_title(label, color="white", fontsize=12)
     return fig, ax
+
 
 def main():
     print(f"Fetching graph for: {PLACE}")
@@ -270,8 +303,8 @@ def main():
     for label, result in results.items():
         plot_route_comparison(graph, result, label)
 
-    import matplotlib.pyplot as plt
     plt.show()
+
 
 if __name__ == "__main__":
     main()
