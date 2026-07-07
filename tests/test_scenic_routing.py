@@ -9,6 +9,7 @@ import pytest
 from prototype_route import (
     BEST_CASE_SCENIC_PENALTY,
     BUSY_ROAD_PENALTIES,
+    DEFAULT_POI_WEIGHT,
     compute_scenic_penalty,
     get_poi_weight,
     get_road_penalty,
@@ -208,6 +209,20 @@ def test_higher_weight_poi_gets_stronger_discount_at_same_distance():
     assert temple_penalty < attraction_penalty
 
 
+def test_new_historic_categories_have_expected_weights():
+    """
+    Sanity check for the broadened POI_TYPE_WEIGHTS table added in Phase 2.5,
+    when `historic` started being queried broadly (True) instead of a fixed list.
+    """
+    assert get_poi_weight({"historic": "castle"}) == 0.9
+    assert get_poi_weight({"historic": "memorial"}) == 0.65
+    # Both of these are real values found in the broadened Higashiyama query but
+    # are clearly not scenic: confirm they correctly fall through to the default
+    # rather than accidentally matching something in POI_TYPE_WEIGHTS.
+    assert get_poi_weight({"historic": "tunnel"}) == DEFAULT_POI_WEIGHT
+    assert get_poi_weight({"historic": "substation"}) == DEFAULT_POI_WEIGHT
+
+
 def test_busy_road_increases_edge_cost():
     """A busy road (e.g. primary) should cost more than a neutral road at the same length."""
     neutral_edge = {"length": 100}
@@ -242,4 +257,4 @@ def test_scenic_route_avoids_busy_road_when_alternative_exists(graph_with_busy_r
     assert route == [1, 3, 4], f"Expected S-A* to avoid the primary road, got {route}"
 
 
-# TODO(phase-1.5): add edge-case tests for orig==dest, disconnected graphs, and empty scenic datasets.
+# TODO(phase-3): add edge-case tests for orig==dest, disconnected graphs, and empty scenic datasets.
