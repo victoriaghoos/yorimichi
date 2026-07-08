@@ -5,6 +5,9 @@ whenever you want to refresh the data): PostGISGraphRepository queries
 against this pre-loaded data rather than calling OSMnx live.
 """
 
+import os
+
+from dotenv import load_dotenv
 import osmnx as ox
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,7 +16,14 @@ from shapely.geometry import Point
 
 from yorimichi.infrastructure.postgis_models import Base, NodeModel, EdgeModel
 
-DATABASE_URL = "postgresql://postgres:yourpassword@localhost:5432/yorimichi"
+load_dotenv()
+
+DATABASE_URL = os.environ.get("POSTGIS_DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "POSTGIS_DATABASE_URL is not set. Set it in your .env file or environment."
+    )
+    
 PLACE = "Higashiyama Ward, Kyoto, Japan"
 
 

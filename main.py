@@ -1,16 +1,21 @@
 """
-Composition root: the only place in the codebase that knows which concrete
-Infrastructure implementations back which Domain ports. Wires everything
-together for both the CLI demo and the FastAPI server.
+Composition root
 """
 
+import os
+
+from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 
 from yorimichi.application.plan_route_use_case import PlanScenicRouteUseCase
+from yorimichi.domain.repositories import IGraphRepository
 from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
+from yorimichi.infrastructure.postgis_graph_repository import PostGISGraphRepository
 from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
 from yorimichi.infrastructure.visualization import print_route_comparison, plot_route_comparison
 from yorimichi.infrastructure import fastapi_app
+
+load_dotenv()
 
 PLACE = "Higashiyama Ward, Kyoto, Japan"
 
@@ -22,29 +27,44 @@ TEST_PAIRS = [
 ]
 
 
-def build_use_case() -> tuple[PlanScenicRouteUseCase, OSMnxGraphRepository]:
-    graph_repo = OSMnxGraphRepository()
+def build_graph_repo() -> IGraphRepository:
+    backend = os.environ.get("YORIMICHI_GRAPH_BACKEND", "osmnx").lower()
+
+    if backend == "postgis":
+        database_url = os.environ.get("POSTGIS_DATABASE_URL")
+        if not database_url:
+            raise RuntimeError(
+                "YORIMICHI_GRAPH_BACKEND=postgis but POSTGIS_DATABASE_URL is not set. "
+                "Set it in your .env file or environment."
+            )
+        print("Using PostGISGraphRepository backend.")
+        return PostGISGraphRepository(database_url)
+
+    print("Using OSMnxGraphRepository backend.")
+    return OSMnxGraphRepository()
+
+
+def build_use_case() -> tuple[PlanScenicRouteUseCase, IGraphRepository]:
+    graph_repo = build_graph_repo()
     scenic_provider = OSMnxScenicDataProvider()
     use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
     return use_case, graph_repo
 
+_use_case, _graph_repo = build_use_case()
 
-api_use_case, _ = build_use_case()
-fastapi_app.configure(api_use_case)
+fastapi_app.configure(_use_case)
 app = fastapi_app.app
 
 
 def run_cli_demo():
-    use_case, graph_repo = build_use_case()
-
     print(f"Fetching graph for: {PLACE}")
-    graph = graph_repo.get_graph(PLACE)
+    graph = _graph_repo.get_graph(PLACE)
     print(f"Nodes: {len(graph.nodes)}, Edges: {len(graph.edges)}")
 
     print("\nComparing baseline vs scenic routes across multiple point pairs:")
     results = {}
     for label, orig_point, dest_point in TEST_PAIRS:
-        result = use_case.execute(PLACE, orig_point, dest_point)
+        result = _use_case.execute(PLACE, orig_point, dest_point)
         print_route_comparison(label, result)
         results[label] = result
 
