@@ -44,6 +44,7 @@ The backend is a fully self-contained, independently testable service, the front
 | **Database** | **PostgreSQL + PostGIS** | The gold standard for geospatial data persistence at scale. Implemented as a second `IGraphRepository` adapter (Phase 5), running locally via Docker. |
 | **ORM** | **SQLAlchemy 2.0** | Powerful, type-safe mapping from objects to SQL. |
 | **Package Manager** | **Poetry** | Consistent, reproducible dependency management. |
+| **Cross-origin requests** | **FastAPI CORSMiddleware** | Allows the Vite dev server (different origin/port) to call the backend's `/route` endpoint directly from the browser. |
 
 **Frontend** *(in progress)*
 
@@ -162,12 +163,13 @@ Built incrementally, proving the core idea before adding infrastructure complexi
 - [x] **Phase 4: API Layer:** FastAPI adapter exposing a `/route` endpoint, backed by `PlanScenicRouteUseCase`. Dependency wiring lives exclusively in the composition root (`main.py`) via FastAPI's `Depends`: the API adapter itself never instantiates concrete Infrastructure classes. A `DomainException` base class (with `CoordinatesOutOfRangeException` as its first concrete case) lets a single global exception handler translate any business-rule violation into a `400 Bad Request`, while genuinely unexpected errors still surface as `500`. Pydantic DTOs (`RouteDTO`, `RouteResponse`) give the endpoint an explicit, auto-documented schema: Domain's `Route` entity never leaks into the HTTP layer directly. Caught and fixed a real edge case during manual testing: coordinates far outside Higashiyama (e.g. `(0, 0)`) previously returned a silently nonsensical route instead of an error. 40+ tests across `unit/domain/`, `unit/application/`, and `unit/infrastructure/` (including FastAPI's `TestClient` for endpoint-level tests), plus a dedicated `integration/` suite validating scenic scoring against real, live OSM data for Higashiyama.
 - [x] **Phase 5: Persistence:** PostGIS-backed `IGraphRepository` adapter (`PostGISGraphRepository`), swapped into `PlanScenicRouteUseCase`. Graph data is pre-imported once from OSMnx into PostGIS tables (`yorimichi_nodes`, `yorimichi_edges`, via `scripts/import_graph_to_postgis.py`) and loaded into an in-memory NetworkX graph on demand, reusing the existing pathfinding logic unchanged. `nearest_node()` uses a genuine PostGIS spatial query (`ST_Distance` against a GiST-indexed geometry column) rather than a Python-side KD-tree: the one place this adapter meaningfully leverages PostGIS's spatial capabilities beyond plain storage. The graph backend (OSMnx vs. PostGIS) is selectable via the `YORIMICHI_GRAPH_BACKEND` environment variable in the composition root (`main.py`), itself a live demonstration of the architecture's swappability. Verified end-to-end: identical route output (`1446.9m` / `1575.5m` for the Kiyomizu-dera → Yasaka Shrine pair) across both backends, both manually and via automated cross-backend integration tests. Database credentials are loaded via `.env`/environment variables, never hardcoded. 52 tests total across `unit/` and `integration/`, all passing.
 - [ ] **Phase 6: Client Application:** A React/Vite frontend (in `frontend/`) consuming the backend's `/route` API evolving beyond the original "static map output" scope into a full walking/cycling companion app:
-    - [ ] Interactive map (react-leaflet) with manual and GPS-based start/destination selection
+    - [x] Interactive map (react-leaflet) rendering live baseline and scenic routes fetched from `/route`, with real coordinates (backend's `RouteDTO` extended to include an ordered list of `(lat, lon)` pairs alongside `node_ids`, so the frontend never needs to resolve node IDs to coordinates itself). CORS configured on the FastAPI app to allow the Vite dev server origin.
+    - [ ] Manual and GPS-based start/destination selection (currently hardcoded to the Kiyomizu-dera → Yasaka Shrine pair used throughout backend development)
     - [ ] Filterable scenic categories (temples, nature, historic landmarks, etc.), passed as parameters to `/route`: building on the region-configurable weighting groundwork noted in *Future Vision*
     - [ ] Walking vs. cycling mode (requires a backend extension: `network_type` parameter on graph fetching, currently hardcoded to `"walk"`)
     - [ ] PWA installability and offline tolerance for mobile use
     - [ ] Live route tracking via the Geolocation API while walking
-    - [ ] Street-level imagery integration (Mapillary, free/open — Google Street View considered but requires a paid API)
+    - [ ] Street-level imagery integration (Mapillary, free/open: Google Street View considered but requires a paid API)
 
 ---
 
