@@ -80,13 +80,13 @@ of this surfacing already during Higashiyama-only development).
 
 ## 🏗️ Architecture / アーキテクチャ
 
-This project follows a **Hexagonal Architecture (Ports & Adapters)** to ensure the business logic remains fully decoupled from external technologies like PostGIS, OSMnx, or FastAPI.
+This project follows a **Hexagonal Architecture (Ports & Adapters)** to ensure the business logic remains fully decoupled from external technologies like OSMnx, NetworkX, PostGIS, or FastAPI.
 
-本プロジェクトは**ヘキサゴナルアーキテクチャ**を採用しており、ビジネスロジックを外部技術（PostGIS、FastAPIなど）から完全に分離しています。
+本プロジェクトは**ヘキサゴナルアーキテクチャ**を採用しており、ビジネスロジックを外部技術（OSMnx、PostGIS、FastAPIなど）から完全に分離しています。
 
-1. **Domain (Core / ドメイン核):** Pure Python logic. No external dependencies. Contains the S-A* algorithm, entities, and scoring rules.
-2. **Application (Ports / ポート):** Orchestrates the flow using abstract interfaces (Ports), depends only on the Domain and the port interfaces, never on concrete infrastructure.
-3. **Infrastructure (Outside / 外部):** Real-world implementations (OSMnx graph loading, NetworkX traversal, later PostGIS persistence and a FastAPI entrypoint).
+1. **Domain (Core / ドメイン核):** Pure Python logic with zero external dependencies. Contains entities (`Node`, `Edge`, `Route`), scoring rules, the S-A* algorithm, and the repository ports themselves (`IGraphRepository`, `IScenicDataProvider`): the Domain dictates the contract for what data it needs, not the infrastructure providing it.
+2. **Application (Use Cases):** Orchestrates the flow using only Domain entities and ports: `PlanScenicRouteUseCase` never imports NetworkX or any concrete infrastructure, and never returns raw infrastructure objects (e.g. a NetworkX graph) to its callers.
+3. **Infrastructure (Outside / 外部):** Real-world implementations: OSMnx graph loading and NetworkX pathfinding execution (`OSMnxGraphRepository`), scenic POI fetching and KD-tree lookup (`OSMnxScenicDataProvider`), and the NetworkX-to-Domain-entity translation layer (`osmnx_routing_adapter`). Later: PostGIS persistence and a FastAPI entrypoint.
 
 ```mermaid
 graph TD
@@ -95,22 +95,24 @@ graph TD
         B[PostGIS / SQLAlchemy]
         C[OSMnx / NetworkX]
     end
-    subgraph Application["Application (Ports)"]
-        D[IRouteService]
-        E[IGraphRepository]
-        F[IScenicDataProvider]
+    subgraph Application["Application (Use Cases)"]
+        D[PlanScenicRouteUseCase]
     end
     subgraph Domain["Domain (Core)"]
+        E[IGraphRepository]
+        F[IScenicDataProvider]
         G[Scenic A* Algorithm]
         H[Entities: Node, Edge, Route]
         I[Scoring Logic]
     end
     A --> D
     D --> G
-    G --> E
-    G --> F
-    E --> B
-    F --> C
+    D --> E
+    D --> F
+    G --> H
+    E -.implemented by.-> C
+    F -.implemented by.-> C
+    B -.future adapter for.-> E
 ```
 
 ---
@@ -123,10 +125,10 @@ Built incrementally, proving the core idea before adding infrastructure complexi
 - [x] **Phase 2: Real Scenic Scoring:**
     - [x] Proximity-based discount for scenic OSM POIs, weighted by category (temples/shrines > generic attractions)
     - [x] Penalty (>1.0 multiplier) for busy/unattractive road types (`primary`/`trunk`/`secondary`), validated against real Higashiyama routes and deterministic synthetic tests
-- [x] **Phase 2.5: Broaden scenic tag coverage:** Queried OSM more broadly (`historic=True` instead of a fixed list), filtered/weighted afterward. Validated on Higashiyama: 603 → 1206 scenic points found. Surfaced a concrete, region-specific scoring nuance (`historic=memorial` unexpectedly dominant here) — see *Known Limitation*.
-- [ ] **Phase 3: Hexagonal Wiring:** Full Domain / Application / Infrastructure separation with the in-memory adapter as the first concrete `IGraphRepository`.
+- [x] **Phase 2.5: Broaden scenic tag coverage:** Queried OSM more broadly (`historic=True` instead of a fixed list), filtered/weighted afterward. Validated on Higashiyama: 603 → 1206 scenic points found. Surfaced a concrete, region-specific scoring nuance (`historic=memorial` unexpectedly dominant here): see *Known Limitation*.
+- [x] **Phase 3: Hexagonal Wiring:** Full Domain / Application / Infrastructure separation. Domain (`entities.py`, `scoring.py`, `routing.py`, `repositories.py`) has zero external dependencies: verified via a "zero mocks" litmus test and a self-contained Haversine implementation replacing `osmnx.distance.great_circle`. Domain-owned repository ports (`IGraphRepository`, `IScenicDataProvider`) use a functional contract (e.g. `get_scenic_penalty(lat, lon)`) rather than exposing infrastructure-specific data structures (KD-trees, NetworkX graphs). `PlanScenicRouteUseCase` orchestrates purely through these ports and Domain entities (`Node`, `Edge`, `Route`): it never imports NetworkX or returns raw infrastructure objects. Three concrete Infrastructure adapters (`OSMnxGraphRepository`, `OSMnxScenicDataProvider`, `osmnx_routing_adapter`) implement these ports, with per-place caching to avoid redundant re-fetching. 31 tests across `unit/domain/`, `unit/application/`, and `unit/infrastructure/`, all passing. Verified end-to-end: identical route output before and after the full refactor.
 - [ ] **Phase 4: API Layer:** FastAPI adapter exposing a `/route` endpoint.
-- [ ] **Phase 5: Persistence:** PostGIS-backed `IGraphRepository` adapter, swapped in without touching the Domain or Application layers — the real proof that the architecture holds.
+- [ ] **Phase 5: Persistence:** PostGIS-backed `IGraphRepository` adapter, swapped in without touching the Domain or Application layers: the real proof that the architecture holds.
 - [ ] **Phase 6: Visualization:** Map output comparing the scenic route against the shortest route.
 
 ---
