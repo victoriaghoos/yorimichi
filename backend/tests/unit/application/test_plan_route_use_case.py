@@ -79,6 +79,8 @@ def test_execute_returns_plan_route_result(simple_graph):
     assert result.baseline_route.node_ids[-1] == "4"
     assert result.scenic_route.node_ids[0] == "1"
     assert result.scenic_route.node_ids[-1] == "4"
+    assert len(result.baseline_coordinates) == len(result.baseline_route.node_ids)
+    assert len(result.scenic_coordinates) == len(result.scenic_route.node_ids)
 
 
 def test_execute_loads_scenic_data_for_the_given_place(simple_graph):
@@ -100,7 +102,12 @@ def test_execute_never_exposes_raw_graph():
     assert not hasattr(PlanRouteResult, "graph")
     fields = PlanRouteResult.__dataclass_fields__
     assert "graph" not in fields
-    assert set(fields.keys()) == {"baseline_route", "scenic_route"}
+    assert set(fields.keys()) == {
+        "baseline_route",
+        "scenic_route",
+        "baseline_coordinates",
+        "scenic_coordinates",
+    }
 
 
 def test_execute_raises_when_origin_coordinates_are_far_from_graph(simple_graph):

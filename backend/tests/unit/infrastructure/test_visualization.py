@@ -8,6 +8,8 @@ def test_print_route_comparison_outputs_expected_format(capsys):
     result = PlanRouteResult(
         baseline_route=Route(node_ids=("1", "2"), length=100.0),
         scenic_route=Route(node_ids=("1", "3", "2"), length=150.0),
+        baseline_coordinates=((35.0, 135.0), (35.001, 135.001)),
+        scenic_coordinates=((35.0, 135.0), (35.0005, 135.0005), (35.001, 135.001)),
     )
 
     print_route_comparison("Test Label", result)

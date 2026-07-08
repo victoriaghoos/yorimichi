@@ -17,6 +17,8 @@ class FakeUseCase:
         return PlanRouteResult(
             baseline_route=Route(node_ids=("1", "2", "3"), length=150.0),
             scenic_route=Route(node_ids=("1", "4", "3"), length=180.0),
+            baseline_coordinates=((35.0, 135.0), (35.0005, 135.0005), (35.001, 135.001)),
+            scenic_coordinates=((35.0, 135.0), (35.0007, 135.0003), (35.001, 135.001)),
         )
 
 
@@ -33,6 +35,8 @@ def test_get_route_returns_200_with_valid_data():
     data = response.json()
     assert data["baseline"]["length_meters"] == 150.0
     assert data["scenic"]["length_meters"] == 180.0
+    assert len(data["baseline"]["coordinates"]) == 3
+    assert len(data["scenic"]["coordinates"]) == 3
 
 
 def test_get_route_returns_400_for_out_of_range_coordinates():
