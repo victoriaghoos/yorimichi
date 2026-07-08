@@ -1,6 +1,11 @@
 """
 Infrastructure adapter: concrete IGraphRepository implementation.
-Owns all networkx-specific routing execution (shortest_path, astar_path)
+Owns all networkx-specific routing execution (shortest_path, astar_path).
+
+Caches loaded graphs per place, so repeated get_graph() calls within one
+session (e.g. main.py fetching once for visualization, then the Use Case
+fetching again internally per route request) don't redundantly re-fetch
+and re-parse the same graph data.
 """
 
 import osmnx as ox
@@ -12,8 +17,13 @@ from yorimichi.infrastructure.osmnx_routing_adapter import make_edge_weight_fn, 
 
 
 class OSMnxGraphRepository(IGraphRepository):
+    def __init__(self):
+        self._cached_graphs = {}
+
     def get_graph(self, place: str):
-        return ox.graph_from_place(place, network_type="walk")
+        if place not in self._cached_graphs:
+            self._cached_graphs[place] = ox.graph_from_place(place, network_type="walk")
+        return self._cached_graphs[place]
 
     def nearest_node(self, graph, lat: float, lon: float) -> Node:
         node_id = ox.nearest_nodes(graph, lon, lat)
