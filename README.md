@@ -168,7 +168,7 @@ Built incrementally, proving the core idea before adding infrastructure complexi
 - [ ] **Phase 6: Client Application:** A React/Vite frontend (in `frontend/`) consuming the backend's `/route` API evolving beyond the original "static map output" scope into a full walking/cycling companion app:
     - [x] Interactive map (react-leaflet) rendering live baseline and scenic routes fetched from `/route`, with real coordinates (backend's `RouteDTO` extended to include an ordered list of `(lat, lon)` pairs alongside `node_ids`, so the frontend never needs to resolve node IDs to coordinates itself). CORS configured on the FastAPI app to allow the Vite dev server origin.
     - [x] Manual start/destination selection via map clicks
-    - [ ] GPS-based start point (via browser Geolocation API)
+    - [x] GPS-based start point (via browser Geolocation API)
     - [ ] Filterable scenic categories (temples, nature, historic landmarks, etc.), passed as parameters to `/route`: building on the region-configurable weighting groundwork noted in *Future Vision*
     - [ ] Walking vs. cycling mode (requires a backend extension: `network_type` parameter on graph fetching, currently hardcoded to `"walk"`)
     - [ ] PWA installability and offline tolerance for mobile use
