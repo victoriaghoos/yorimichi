@@ -5,6 +5,7 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import ClickHandler from './ClickHandler'
+import MapFlyTo from './MapFlyTo'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -137,6 +138,7 @@ function RouteMap() {
         />
 
         <ClickHandler onMapClick={handleMapClick} />
+        <MapFlyTo position={origin} />
 
         {origin && (
           <Marker position={[origin.lat, origin.lon]}>
