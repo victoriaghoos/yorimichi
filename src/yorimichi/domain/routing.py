@@ -14,6 +14,7 @@ from yorimichi.domain.scoring import (
 )
 
 EARTH_RADIUS_METERS = 6_371_000
+MAX_REASONABLE_DISTANCE_METERS = 2000
 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
