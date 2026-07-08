@@ -41,9 +41,11 @@ class FakeScenicDataProvider:
     def __init__(self, fixed_penalty=1.0):
         self.fixed_penalty = fixed_penalty
         self.loaded_place = None
+        self.loaded_categories = None
 
-    def load(self, place):
+    def load(self, place, categories=None):
         self.loaded_place = place
+        self.loaded_categories = categories
 
     def get_scenic_penalty(self, lat, lon):
         return self.fixed_penalty

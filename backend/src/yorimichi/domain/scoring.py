@@ -14,39 +14,51 @@ BEST_CASE_SCENIC_PENALTY = 1.0 - MAX_SCENIC_DISCOUNT
 # High-confidence weights for specific, known-good OSM tag values.
 # Higher weight = stronger scenic pull (bigger discount when nearby).
 POI_TYPE_WEIGHTS = {
-    # Religious / sacred sites
-    "temple": 1.0,
-    "shrine": 1.0,
-    "wayside_shrine": 1.0,
-    "place_of_worship": 0.9,
-    "monastery": 0.9,
-    "church": 0.85,
-    "wayside_chapel": 0.7,
-    "wayside_cross": 0.7,
+    # shrines_temples
+    "temple": (1.0, "shrines_temples"),
+    "shrine": (1.0, "shrines_temples"),
+    "wayside_shrine": (1.0, "shrines_temples"),
+    "place_of_worship": (0.9, "shrines_temples"),
+    "monastery": (0.9, "shrines_temples"),
+    "church": (0.85, "shrines_temples"),
+    "wayside_chapel": (0.7, "shrines_temples"),
+    "wayside_cross": (0.7, "shrines_temples"),
 
-    # Historic structures / landmarks
-    "castle": 0.9,
-    "heritage": 0.85,
-    "manor": 0.8,
-    "monument": 0.8,
-    "city_gate": 0.75,
-    "citywalls": 0.7,
-    "tower": 0.75,
-    "archaeological_site": 0.7,
-    "ruins": 0.7,
-    "fort": 0.7,
-    "bridge": 0.65,
+    # historic_sites
+    "castle": (0.9, "historic_sites"),
+    "heritage": (0.85, "historic_sites"),
+    "manor": (0.8, "historic_sites"),
+    "monument": (0.8, "historic_sites"),
+    "city_gate": (0.75, "historic_sites"),
+    "citywalls": (0.7, "historic_sites"),
+    "tower": (0.75, "historic_sites"),
+    "archaeological_site": (0.7, "historic_sites"),
+    "ruins": (0.7, "historic_sites"),
+    "fort": (0.7, "historic_sites"),
+    "bridge": (0.65, "historic_sites"),
 
-    # Nature / leisure
-    "park": 0.6,
-    "garden": 0.7,
-    "attraction": 0.5,
-    "viewpoint": 0.6,
+    # parks
+    "park": (0.6, "parks"),
+    "garden": (0.7, "parks"),
 
-    # Lower-confidence / generic
-    "memorial": 0.65,
-    "house": 0.4,
+    # viewpoints
+    "attraction": (0.5, "viewpoints"),
+    "viewpoint": (0.6, "viewpoints"),
+
+    # waterside (new)
+    "water": (0.6, "waterside"),
+    "riverbank": (0.6, "waterside"),
+
+    # nature (new)
+    "wood": (0.6, "nature"),
+    "forest": (0.6, "nature"),
+
+    # lower-confidence / generic — no category, always neutral-ish, unaffected by filters
+    "memorial": (0.65, "memorials"),
+    "house": (0.4, "generic"),
 }
+
+ALL_CATEGORIES = {"shrines_temples", "historic_sites", "parks", "viewpoints", "waterside", "nature", "memorials"}
 
 # OSM keys where an unlisted value is still plausibly scenic (e.g. an
 # unfamiliar historic=* value we haven't explicitly weighted yet). Values
@@ -69,6 +81,7 @@ EXCLUDED_VALUES = {
 }
 
 DEFAULT_POI_WEIGHT = 0.4  # generic fallback for anything not covered above
+NEUTRAL_WEIGHT = 1.0  # fully neutral: no scenic discount at all
 
 # Penalty multiplier for busy/unattractive road types, based on OSM's `highway` tag.
 # Factor > 1.0 makes these edges more "expensive" in the scenic-weighted cost,
@@ -83,29 +96,43 @@ BUSY_ROAD_PENALTIES = {
 }
 DEFAULT_ROAD_PENALTY = 1.0  # neutral: no penalty, no discount
 
-
-def get_poi_weight(row):
+def get_poi_weight(row, active_categories: set[str] | None = None) -> float:
     """
     Look up the scenic weight for a POI row. Prefers a small, curated set of
     high-confidence weights for known categories; falls back to a moderate
     "probably somewhat scenic" weight for unlisted-but-plausible values under
     likely-scenic keys, rather than immediately dropping to the generic default.
+
+    active_categories: if provided, only POI categories in this set contribute
+    any scenic weight: POIs in other categories are treated as fully neutral
+    (NEUTRAL_WEIGHT, i.e. no discount at all), not merely reduced.
+    "generic"-category POIs are unaffected by filtering. None means all
+    categories are active (default, unfiltered behavior).
     """
-    for tag_col in ("historic", "amenity", "leisure", "tourism", "building"):
+    for tag_col in ("historic", "amenity", "leisure", "tourism", "building", "natural", "waterway"):
         value = row.get(tag_col)
         if value is None:
             continue
 
         if value in POI_TYPE_WEIGHTS:
-            return POI_TYPE_WEIGHTS[value]
+            weight, category = POI_TYPE_WEIGHTS[value]
+            if active_categories is not None and category != "generic" and category not in active_categories:
+                return NEUTRAL_WEIGHT
+            return weight
 
         if value not in EXCLUDED_VALUES and tag_col in LIKELY_SCENIC_KEYS:
+            if active_categories is not None:
+                return NEUTRAL_WEIGHT
             return LIKELY_SCENIC_FALLBACK_WEIGHT
 
     if row.get("religion") in ("buddhist", "shinto"):
+        if active_categories is not None and "shrines_temples" not in active_categories:
+            return NEUTRAL_WEIGHT
         return 1.0
 
     if row.get("wikipedia") is not None or row.get("wikidata") is not None:
+        if active_categories is not None:
+            return NEUTRAL_WEIGHT
         return 0.9
 
     return DEFAULT_POI_WEIGHT

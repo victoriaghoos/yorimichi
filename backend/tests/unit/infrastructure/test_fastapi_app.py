@@ -11,7 +11,7 @@ class FakeUseCase:
     def __init__(self, should_raise=False):
         self.should_raise = should_raise
 
-    def execute(self, place, orig_point, dest_point):
+    def execute(self, place, orig_point, dest_point, categories=None):
         if self.should_raise:
             raise CoordinatesOutOfRangeException("Origin", orig_point[0], orig_point[1], 14_000_000, place)
         return PlanRouteResult(

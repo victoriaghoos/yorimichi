@@ -13,7 +13,6 @@ def _node_from_graph(graph, node_id) -> Node:
 
 
 def make_edge_weight_fn(graph, scenic_provider):
-    """Returns a networkx-compatible weight function, translating (u, v, data) into a Domain Edge."""
     def weight_fn(u, v, data):
         edge = Edge(
             from_node=_node_from_graph(graph, u),

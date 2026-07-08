@@ -10,6 +10,8 @@ from yorimichi.domain.scoring import (
     BEST_CASE_SCENIC_PENALTY,
     BUSY_ROAD_PENALTIES,
     DEFAULT_POI_WEIGHT,
+    LIKELY_SCENIC_FALLBACK_WEIGHT,
+    NEUTRAL_WEIGHT,
     compute_scenic_penalty,
     get_poi_weight,
     get_road_penalty,
@@ -76,6 +78,29 @@ def test_new_historic_categories_have_expected_weights():
     assert get_poi_weight({"historic": "memorial"}) == 0.65
     assert get_poi_weight({"historic": "tunnel"}) == DEFAULT_POI_WEIGHT
     assert get_poi_weight({"historic": "substation"}) == DEFAULT_POI_WEIGHT
+
+
+def test_filtered_out_known_category_becomes_fully_neutral():
+    assert get_poi_weight({"historic": "temple"}, {"parks"}) == NEUTRAL_WEIGHT
+
+
+def test_active_category_keeps_its_real_weight():
+    assert get_poi_weight({"leisure": "park"}, {"parks"}) == 0.6
+
+
+def test_filtered_out_likely_scenic_fallback_becomes_fully_neutral():
+    assert get_poi_weight({"historic": "unknown_but_scenicish"}, {"parks"}) == NEUTRAL_WEIGHT
+    assert get_poi_weight({"historic": "unknown_but_scenicish"}) == LIKELY_SCENIC_FALLBACK_WEIGHT
+
+
+def test_filtered_out_religious_fallback_becomes_fully_neutral():
+    assert get_poi_weight({"religion": "shinto"}, {"parks"}) == NEUTRAL_WEIGHT
+    assert get_poi_weight({"religion": "shinto"}, {"shrines_temples"}) == 1.0
+
+
+def test_filtered_out_wikipedia_fallback_becomes_fully_neutral():
+    assert get_poi_weight({"wikipedia": "ja:Some Landmark"}, {"parks"}) == NEUTRAL_WEIGHT
+    assert get_poi_weight({"wikipedia": "ja:Some Landmark"}) == 0.9
 
 
 def test_busy_road_increases_edge_cost():

@@ -37,18 +37,15 @@ class IGraphRepository(ABC):
 
 
 class IScenicDataProvider(ABC):
-    """
-    Provides scenic scoring for coordinates, without exposing HOW that
-    scoring is computed (KD-tree lookups, weight arrays, etc. stay entirely
-    inside the concrete Infrastructure implementation).
-    """
-
     @abstractmethod
-    def load(self, place: str):
-        """Loads/prepares scenic data for the given place (called once per session)."""
+    def load(self, place: str, categories: list[str] | None = None):
+        """
+        Loads/prepares scenic data for the given place. If categories is
+        provided, only those scenic categories are weighted; others fall
+        back to the neutral default. None means all categories (default behavior).
+        """
         raise NotImplementedError
 
     @abstractmethod
     def get_scenic_penalty(self, lat: float, lon: float) -> float:
-        """Returns the scenic discount/penalty factor for a coordinate."""
         raise NotImplementedError

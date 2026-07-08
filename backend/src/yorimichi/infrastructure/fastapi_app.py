@@ -1,6 +1,8 @@
 """
 Infrastructure adapter: FastAPI entrypoint. Exposes PlanScenicRouteUseCase
-over HTTP via dependency injection.
+over HTTP via dependency injection: this file does NOT instantiate any
+concrete Infrastructure implementations itself. That wiring belongs
+exclusively to the composition root (main.py).
 """
 
 from fastapi import FastAPI, Request, Depends
@@ -48,9 +50,16 @@ def get_route(
     orig_lon: float,
     dest_lat: float,
     dest_lon: float,
+    categories: str | None = None,
     use_case: PlanScenicRouteUseCase = Depends(get_use_case),
 ) -> RouteResponse:
-    result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon))
+    """
+    categories: optional comma-separated list of active scenic categories
+    (e.g. "shrines_temples,parks"). If omitted, all categories are active
+    (default, unfiltered behavior).
+    """
+    category_list = categories.split(",") if categories else None
+    result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon), category_list)
 
     return RouteResponse(
         baseline=RouteDTO(
