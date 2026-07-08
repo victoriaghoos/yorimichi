@@ -32,13 +32,39 @@ function RouteMap() {
     } else if (!destination) {
       setDestination({ lat, lon })
     } else {
-      // Third click: reset and start over as the new origin
       setOrigin({ lat, lon })
       setDestination(null)
       setRouteData(null)
       setError(null)
     }
   }, [origin, destination])
+
+  const handleUseMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.')
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setOrigin({ lat: position.coords.latitude, lon: position.coords.longitude })
+        setDestination(null)
+        setRouteData(null)
+        setError(null)
+      },
+      (geoError) => {
+        setError(`Could not get your location: ${geoError.message}`)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [])
+
+  const handleReset = useCallback(() => {
+    setOrigin(null)
+    setDestination(null)
+    setRouteData(null)
+    setError(null)
+  }, [])
 
   useEffect(() => {
     if (!origin || !destination) return
@@ -88,7 +114,7 @@ function RouteMap() {
   const scenicCoordinates = routeData?.scenic?.coordinates ?? []
 
   const getStatusMessage = () => {
-    if (error) return { text: `Error loading route: ${error}`, color: '#b91c1c' }
+    if (error) return { text: `Error: ${error}`, color: '#b91c1c' }
     if (loading) return { text: 'Loading route...', color: '#334155' }
     if (routeData) {
       return {
@@ -97,7 +123,7 @@ function RouteMap() {
       }
     }
     if (origin && !destination) return { text: 'Click the map to set your destination.', color: '#334155' }
-    return { text: 'Click the map to set your starting point.', color: '#334155' }
+    return { text: 'Click the map, or use your location, to set a starting point.', color: '#334155' }
   }
 
   const status = getStatusMessage()
@@ -148,19 +174,16 @@ function RouteMap() {
         }}
       >
         <div style={{ color: status.color }}>{status.text}</div>
-        {(origin || destination) && (
-          <button
-            onClick={() => {
-              setOrigin(null)
-              setDestination(null)
-              setRouteData(null)
-              setError(null)
-            }}
-            style={{ marginTop: 8, fontSize: 12, padding: '4px 8px', cursor: 'pointer' }}
-          >
-            Reset
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button onClick={handleUseMyLocation} style={{ fontSize: 12, padding: '4px 8px', cursor: 'pointer' }}>
+            Use my location
           </button>
-        )}
+          {(origin || destination) && (
+            <button onClick={handleReset} style={{ fontSize: 12, padding: '4px 8px', cursor: 'pointer' }}>
+              Reset
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
