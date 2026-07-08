@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from yorimichi.application.plan_route_use_case import PlanScenicRouteUseCase
 from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
 from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
+from yorimichi.infrastructure.api_models import RouteDTO, RouteResponse
 
 app = FastAPI(title="Yorimichi API", description="Scenic route planning for Higashiyama, Kyoto")
 
@@ -16,22 +17,22 @@ scenic_provider = OSMnxScenicDataProvider()
 use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
 
 
-@app.get("/route")
+@app.get("/route", response_model=RouteResponse)
 def get_route(
     place: str,
     orig_lat: float,
     orig_lon: float,
     dest_lat: float,
     dest_lon: float,
-):
+) -> RouteResponse:
     result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon))
-    return {
-        "baseline": {
-            "node_ids": result.baseline_route.node_ids,
-            "length_meters": result.baseline_route.length,
-        },
-        "scenic": {
-            "node_ids": result.scenic_route.node_ids,
-            "length_meters": result.scenic_route.length,
-        },
-    }
+    return RouteResponse(
+        baseline=RouteDTO(
+            node_ids=list(result.baseline_route.node_ids),
+            length_meters=result.baseline_route.length,
+        ),
+        scenic=RouteDTO(
+            node_ids=list(result.scenic_route.node_ids),
+            length_meters=result.scenic_route.length,
+        ),
+    )
