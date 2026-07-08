@@ -3,6 +3,8 @@ Infrastructure adapter: PostGIS-backed IGraphRepository implementation.
 """
 
 import networkx as nx
+from shapely.geometry import Point
+from geoalchemy2.shape import from_shape
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -44,7 +46,23 @@ class PostGISGraphRepository(IGraphRepository):
             session.close()
 
     def nearest_node(self, graph, lat: float, lon: float) -> Node:
-        raise NotImplementedError("nearest_node() not yet implemented: coming in the next step")
+        """
+        Finds the nearest node using a real PostGIS spatial query (ST_Distance
+        against the geom column), rather than a Python-side search.
+        """
+        session = self._Session()
+        try:
+            query_point = from_shape(Point(lon, lat), srid=4326)
+            nearest = (
+                session.query(NodeModel)
+                .order_by(NodeModel.geom.distance_centroid(query_point))
+                .first()
+            )
+            if nearest is None:
+                raise RuntimeError("No nodes found in the database: did you run the import script?")
+            return Node(id=nearest.id, lat=nearest.lat, lon=nearest.lon)
+        finally:
+            session.close()
 
     def find_shortest_route(self, graph, orig: Node, dest: Node) -> Route:
         raise NotImplementedError("find_shortest_route() not yet implemented: coming in the next step")
