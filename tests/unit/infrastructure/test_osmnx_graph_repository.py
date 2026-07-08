@@ -109,3 +109,20 @@ def test_find_scenic_route_diverges_with_meaningful_scenic_incentive(simple_grap
     # even if they happen to coincide on this small symmetric graph.
     assert scenic.node_ids[0] == baseline.node_ids[0]
     assert scenic.node_ids[-1] == baseline.node_ids[-1]
+    
+def test_get_graph_caches_result_for_same_place(simple_graph, monkeypatch):
+    """Confirms get_graph() doesn't re-fetch when called twice with the same place."""
+    call_count = {"count": 0}
+
+    def fake_graph_from_place(place, network_type):
+        call_count["count"] += 1
+        return simple_graph
+
+    monkeypatch.setattr("yorimichi.infrastructure.osmnx_graph_repository.ox.graph_from_place", fake_graph_from_place)
+
+    repo = OSMnxGraphRepository()
+    graph1 = repo.get_graph("Fake Place")
+    graph2 = repo.get_graph("Fake Place")
+
+    assert call_count["count"] == 1  # only fetched once, second call used cache
+    assert graph1 is graph2
