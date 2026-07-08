@@ -44,6 +44,14 @@ def get_route(
     result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon))
 
     return RouteResponse(
-        baseline=RouteDTO(node_ids=list(result.baseline_route.node_ids), length_meters=result.baseline_route.length),
-        scenic=RouteDTO(node_ids=list(result.scenic_route.node_ids), length_meters=result.scenic_route.length),
+        baseline=RouteDTO(
+            node_ids=list(result.baseline_route.node_ids),
+            length_meters=result.baseline_route.length,
+            coordinates=list(result.baseline_coordinates),
+        ),
+        scenic=RouteDTO(
+            node_ids=list(result.scenic_route.node_ids),
+            length_meters=result.scenic_route.length,
+            coordinates=list(result.scenic_coordinates),
+        ),
     )
