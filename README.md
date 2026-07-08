@@ -24,8 +24,11 @@ In Japanese culture, **Yorimichi** means to stop by somewhere on one's way home 
 ## 📁 Repository Structure
 
 This is a monorepo containing both the routing engine and its client application:
+
 yorimichi/
+
 ├── backend/     ← Python/FastAPI routing engine (Phases 1-6, detailed below)
+
 └── frontend/    ← React/Vite web & mobile client (in progress)
 
 The backend is a fully self-contained, independently testable service, the frontend is one of potentially several consumers of its `/route` API.
