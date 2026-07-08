@@ -16,6 +16,8 @@ from yorimichi.domain.routing import haversine_distance, MAX_REASONABLE_DISTANCE
 class PlanRouteResult:
     baseline_route: Route
     scenic_route: Route
+    baseline_coordinates: tuple[tuple[float, float], ...]
+    scenic_coordinates: tuple[tuple[float, float], ...]
 
 
 class PlanScenicRouteUseCase:
@@ -35,8 +37,45 @@ class PlanScenicRouteUseCase:
 
         baseline_route = self._graph_repo.find_shortest_route(graph, orig_node, dest_node)
         scenic_route = self._graph_repo.find_scenic_route(graph, orig_node, dest_node, self._scenic_provider)
+        baseline_coordinates = self._node_ids_to_coordinates(graph, baseline_route.node_ids)
+        scenic_coordinates = self._node_ids_to_coordinates(graph, scenic_route.node_ids)
 
-        return PlanRouteResult(baseline_route=baseline_route, scenic_route=scenic_route)
+        return PlanRouteResult(
+            baseline_route=baseline_route,
+            scenic_route=scenic_route,
+            baseline_coordinates=baseline_coordinates,
+            scenic_coordinates=scenic_coordinates,
+        )
+
+    def _node_ids_to_coordinates(self, graph, node_ids: tuple[str, ...]) -> tuple[tuple[float, float], ...]:
+        """
+        Resolves node IDs to (lat, lon) coordinates for the given graph.
+
+        Note: OSMnxGraphRepository stores nodes with integer IDs (networkx
+        convention), while PostGISGraphRepository stores them with string
+        IDs (yorimichi_nodes.id is a String column). Route.node_ids is
+        always a tuple of strings (see Route entity), so this function
+        normalizes by trying the string form first, then falling back to
+        an int conversion for graphs built from the OSMnx backend.
+
+        This int/string inconsistency between the two IGraphRepository
+        implementations is known technical debt: ideally both backends
+        would agree on a single node ID type so this fallback wouldn't be
+        necessary. Left as-is for now since both backends are otherwise
+        fully interchangeable and this is the only place the difference
+        leaks through.
+        """
+        coordinates: list[tuple[float, float]] = []
+        for node_id in node_ids:
+            graph_node_id = node_id
+            if graph_node_id not in graph.nodes:
+                try:
+                    graph_node_id = int(node_id)
+                except (ValueError, TypeError):
+                    graph_node_id = node_id
+            node_data = graph.nodes[graph_node_id]
+            coordinates.append((node_data["y"], node_data["x"]))
+        return tuple(coordinates)
 
     def _validate_within_range(self, label: str, point: tuple[float, float], nearest_node, place: str):
         distance = haversine_distance(point[0], point[1], nearest_node.lat, nearest_node.lon)
