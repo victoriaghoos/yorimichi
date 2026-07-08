@@ -9,6 +9,9 @@ from pydantic import BaseModel, Field
 class RouteDTO(BaseModel):
     node_ids: list[str] = Field(..., description="Ordered list of graph node IDs forming the route")
     length_meters: float = Field(..., description="Total real-world length of the route, in meters")
+    coordinates: list[tuple[float, float]] = Field(
+        ..., description="Ordered (lat, lon) pairs for each node in the route"
+    )
 
 
 class RouteResponse(BaseModel):
