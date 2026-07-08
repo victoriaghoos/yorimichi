@@ -29,3 +29,8 @@ dev = [
     "pytest (>=9.1.1,<10.0.0)",
     "httpx2 (>=2.5.0,<3.0.0)",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (real network calls, slower)",
+]
