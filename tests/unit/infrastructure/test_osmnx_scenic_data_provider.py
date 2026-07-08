@@ -1,8 +1,3 @@
-import sys
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent.parent.parent.parent / "scripts"))
-
 import pytest
 
 from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
