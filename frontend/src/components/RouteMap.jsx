@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import ClickHandler from './ClickHandler'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -13,25 +14,48 @@ L.Icon.Default.mergeOptions({
 })
 
 const HIGASHIYAMA_CENTER = [34.9949, 135.7850]
-const DEFAULT_ROUTE_REQUEST = {
-  place: 'Higashiyama Ward, Kyoto, Japan',
-  orig_lat: 34.9949,
-  orig_lon: 135.785,
-  dest_lat: 35.0038,
-  dest_lon: 135.7788,
-}
+const PLACE = 'Higashiyama Ward, Kyoto, Japan'
 
 function RouteMap() {
+  const [origin, setOrigin] = useState(null)
+  const [destination, setDestination] = useState(null)
   const [routeData, setRouteData] = useState(null)
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleMapClick = useCallback((lat, lon) => {
+    if (!origin) {
+      setOrigin({ lat, lon })
+      setDestination(null)
+      setRouteData(null)
+      setError(null)
+    } else if (!destination) {
+      setDestination({ lat, lon })
+    } else {
+      // Third click: reset and start over as the new origin
+      setOrigin({ lat, lon })
+      setDestination(null)
+      setRouteData(null)
+      setError(null)
+    }
+  }, [origin, destination])
 
   useEffect(() => {
+    if (!origin || !destination) return
+
     let cancelled = false
 
     async function loadRoute() {
+      setLoading(true)
       setError(null)
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-      const query = new URLSearchParams(DEFAULT_ROUTE_REQUEST).toString()
+      const query = new URLSearchParams({
+        place: PLACE,
+        orig_lat: origin.lat,
+        orig_lon: origin.lon,
+        dest_lat: destination.lat,
+        dest_lon: destination.lon,
+      }).toString()
 
       try {
         const response = await fetch(`${apiBaseUrl}/route?${query}`)
@@ -47,6 +71,10 @@ function RouteMap() {
         if (!cancelled) {
           setError(fetchError instanceof Error ? fetchError.message : 'Unknown route fetch error')
         }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
@@ -54,27 +82,46 @@ function RouteMap() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [origin, destination])
 
   const baselineCoordinates = routeData?.baseline?.coordinates ?? []
   const scenicCoordinates = routeData?.scenic?.coordinates ?? []
 
-  const mapCenter = scenicCoordinates.length > 0 ? scenicCoordinates[0] : HIGASHIYAMA_CENTER
+  const getStatusMessage = () => {
+    if (error) return { text: `Error loading route: ${error}`, color: '#b91c1c' }
+    if (loading) return { text: 'Loading route...', color: '#334155' }
+    if (routeData) {
+      return {
+        text: `Scenic: ${routeData.scenic.length_meters.toFixed(1)} m — Baseline: ${routeData.baseline.length_meters.toFixed(1)} m`,
+        color: '#334155',
+      }
+    }
+    if (origin && !destination) return { text: 'Click the map to set your destination.', color: '#334155' }
+    return { text: 'Click the map to set your starting point.', color: '#334155' }
+  }
+
+  const status = getStatusMessage()
 
   return (
     <div style={{ position: 'relative', height: '100vh', width: '100%' }}>
-      <MapContainer center={mapCenter} zoom={16} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={HIGASHIYAMA_CENTER} zoom={15} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <Marker position={[DEFAULT_ROUTE_REQUEST.orig_lat, DEFAULT_ROUTE_REQUEST.orig_lon]}>
-          <Popup>Start</Popup>
-        </Marker>
-        <Marker position={[DEFAULT_ROUTE_REQUEST.dest_lat, DEFAULT_ROUTE_REQUEST.dest_lon]}>
-          <Popup>Destination</Popup>
-        </Marker>
+        <ClickHandler onMapClick={handleMapClick} />
+
+        {origin && (
+          <Marker position={[origin.lat, origin.lon]}>
+            <Popup>Start</Popup>
+          </Marker>
+        )}
+        {destination && (
+          <Marker position={[destination.lat, destination.lon]}>
+            <Popup>Destination</Popup>
+          </Marker>
+        )}
 
         {baselineCoordinates.length > 1 && (
           <Polyline positions={baselineCoordinates} pathOptions={{ color: '#64748b', weight: 5, opacity: 0.85 }} />
@@ -100,15 +147,19 @@ function RouteMap() {
           maxWidth: 360,
         }}
       >
-        {error ? (
-          <div style={{ color: '#b91c1c' }}>Error loading route: {error}</div>
-        ) : routeData ? (
-          <div>
-            <div>Scenic: {routeData.scenic.length_meters.toFixed(1)} m</div>
-            <div>Baseline: {routeData.baseline.length_meters.toFixed(1)} m</div>
-          </div>
-        ) : (
-          <div>Loading route...</div>
+        <div style={{ color: status.color }}>{status.text}</div>
+        {(origin || destination) && (
+          <button
+            onClick={() => {
+              setOrigin(null)
+              setDestination(null)
+              setRouteData(null)
+              setError(null)
+            }}
+            style={{ marginTop: 8, fontSize: 12, padding: '4px 8px', cursor: 'pointer' }}
+          >
+            Reset
+          </button>
         )}
       </div>
     </div>
