@@ -29,8 +29,9 @@ def build_use_case() -> tuple[PlanScenicRouteUseCase, OSMnxGraphRepository]:
     return use_case, graph_repo
 
 
-fastapi_app.configure(build_use_case())
-app = fastapi_app.app  
+api_use_case, _ = build_use_case()
+fastapi_app.configure(api_use_case)
+app = fastapi_app.app
 
 
 def run_cli_demo():
