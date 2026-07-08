@@ -18,8 +18,8 @@ from yorimichi.domain.repositories import IGraphRepository
 
 load_dotenv()
 
-PLACE = "Higashiyama Ward, Kyoto, Japan"
 DATABASE_URL = os.environ.get("POSTGIS_DATABASE_URL")
+PLACE = "Higashiyama Ward, Kyoto, Japan"
 
 # Known coordinates verified manually throughout this project
 KIYOMIZU_DERA = (34.9949, 135.7850)

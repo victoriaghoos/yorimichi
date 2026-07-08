@@ -5,7 +5,7 @@ description = ""
 authors = [
     {name = "victoriaghoos",email = "ghoosvictoria@gmail.com"}
 ]
-readme = "README.md"
+readme = "../README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "osmnx (>=2.1.0,<3.0.0)",
