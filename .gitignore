@@ -345,6 +345,7 @@ paket-files/
 .venv/
 venv/
 cache/
+.env
 
 # Cake - Uncomment if you are using it
 #tools/**
