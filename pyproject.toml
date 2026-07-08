@@ -17,7 +17,8 @@ dependencies = [
     "uvicorn (>=0.50.2,<0.51.0)",
     "sqlalchemy (>=2.0.51,<3.0.0)",
     "psycopg2-binary (>=2.9.12,<3.0.0)",
-    "geoalchemy2 (>=0.20.0,<0.21.0)"
+    "geoalchemy2 (>=0.20.0,<0.21.0)",
+    "shapely (>=2.1.2,<3.0.0)"
 ]
 
 [tool.poetry]
