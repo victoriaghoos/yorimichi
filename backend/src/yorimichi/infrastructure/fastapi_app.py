@@ -4,6 +4,7 @@ over HTTP via dependency injection.
 """
 
 from fastapi import FastAPI, Request, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from yorimichi.application.plan_route_use_case import PlanScenicRouteUseCase
@@ -11,6 +12,14 @@ from yorimichi.domain.exceptions import DomainException
 from yorimichi.infrastructure.api_models import RouteDTO, RouteResponse
 
 app = FastAPI(title="Yorimichi API", description="Scenic route planning for Higashiyama, Kyoto")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 _use_case: PlanScenicRouteUseCase | None = None
 
