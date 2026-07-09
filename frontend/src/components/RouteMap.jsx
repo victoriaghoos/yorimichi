@@ -17,12 +17,34 @@ L.Icon.Default.mergeOptions({
 const HIGASHIYAMA_CENTER = [34.9949, 135.7850]
 const PLACE = 'Higashiyama Ward, Kyoto, Japan'
 
+const SCENIC_CATEGORIES = [
+  { key: 'shrines_temples', label: '⛩️ 神社仏閣', sublabel: 'Shrines & Temples' },
+  { key: 'parks', label: '🌸 公園・緑地', sublabel: 'Parks & Green Spaces' },
+  { key: 'waterside', label: '🌊 水辺', sublabel: 'Waterside' },
+  { key: 'historic_sites', label: '🏯 史跡', sublabel: 'Historic Sites' },
+  { key: 'nature', label: '🌳 自然', sublabel: 'Nature' },
+  { key: 'viewpoints', label: '🌉 景観スポット', sublabel: 'Scenic Viewpoints' },
+]
+
 function RouteMap() {
   const [origin, setOrigin] = useState(null)
   const [destination, setDestination] = useState(null)
   const [routeData, setRouteData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [activeCategories, setActiveCategories] = useState(new Set())
+
+  const toggleCategory = useCallback((categoryKey) => {
+    setActiveCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(categoryKey)) {
+        next.delete(categoryKey)
+      } else {
+        next.add(categoryKey)
+      }
+      return next
+    })
+  }, [])
 
   const handleMapClick = useCallback((lat, lon) => {
     if (!origin) {
@@ -76,13 +98,17 @@ function RouteMap() {
       setLoading(true)
       setError(null)
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-      const query = new URLSearchParams({
+      const params = {
         place: PLACE,
         orig_lat: origin.lat,
         orig_lon: origin.lon,
         dest_lat: destination.lat,
         dest_lon: destination.lon,
-      }).toString()
+      }
+      if (activeCategories.size > 0) {
+        params.boost_categories = Array.from(activeCategories).join(',')
+      }
+      const query = new URLSearchParams(params).toString()
 
       try {
         const response = await fetch(`${apiBaseUrl}/route?${query}`)
@@ -109,7 +135,7 @@ function RouteMap() {
     return () => {
       cancelled = true
     }
-  }, [origin, destination])
+  }, [origin, destination, activeCategories])
 
   const baselineCoordinates = routeData?.baseline?.coordinates ?? []
   const scenicCoordinates = routeData?.scenic?.coordinates ?? []
@@ -185,6 +211,30 @@ function RouteMap() {
               Reset
             </button>
           )}
+        </div>
+
+        <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {SCENIC_CATEGORIES.map((category) => {
+            const isActive = activeCategories.has(category.key)
+            return (
+              <button
+                key={category.key}
+                onClick={() => toggleCategory(category.key)}
+                title={category.sublabel}
+                style={{
+                  fontSize: 11,
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  borderRadius: 6,
+                  border: isActive ? '2px solid #0f766e' : '1px solid #cbd5e1',
+                  background: isActive ? '#ccfbf1' : '#ffffff',
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                {category.label}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
