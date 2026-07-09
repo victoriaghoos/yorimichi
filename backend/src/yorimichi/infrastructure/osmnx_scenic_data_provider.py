@@ -37,8 +37,12 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
             "leisure": ["park", "garden"],
             "tourism": ["attraction", "viewpoint"],
             "building": ["temple"],
-            "natural": ["water", "wood"],
+            "natural": ["water", "wood", "tree", "tree_row"],
+            "landuse": ["forest"],
             "waterway": True,
+            "genus": ["Cerasus"],
+            "ceremonial_gate": ["torii"],
+            "man_made": ["ceremonial_gate"],
         }
         scenic_gdf = ox.features_from_place(place, tags)
 

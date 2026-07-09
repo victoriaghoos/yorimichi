@@ -90,6 +90,31 @@ def test_non_boosted_category_stays_at_normal_strength():
     assert get_poi_weight({"leisure": "park"}, {"nature": 1.5}) == 0.6
 
 
+def test_tree_is_weighted_as_nature_and_respects_boosts():
+    assert get_poi_weight({"natural": "tree"}) == 0.5
+    assert get_poi_weight({"natural": "tree"}, {"nature": 1.5}) == pytest.approx(0.75)
+
+
+def test_tree_row_is_weighted_as_nature_and_respects_boosts():
+    assert get_poi_weight({"natural": "tree_row"}) == pytest.approx(0.55)
+    assert get_poi_weight({"natural": "tree_row"}, {"nature": 1.5}) == pytest.approx(0.825)
+
+
+def test_landuse_forest_is_weighted_as_nature_and_respects_boosts():
+    assert get_poi_weight({"landuse": "forest"}) == 0.6
+    assert get_poi_weight({"landuse": "forest"}, {"nature": 1.5}) == pytest.approx(0.9)
+
+
+def test_cerasus_gets_priority_nature_weight_and_respects_boosts():
+    assert get_poi_weight({"genus": "Cerasus"}) == 1.0
+    assert get_poi_weight({"genus": "Cerasus"}, {"nature": 1.5}) == pytest.approx(1.5)
+
+
+def test_torii_tags_get_priority_shrine_weight_and_respect_boosts():
+    assert get_poi_weight({"ceremonial_gate": "torii"}) == 1.0
+    assert get_poi_weight({"man_made": "ceremonial_gate"}, {"shrines_temples": 0.7}) == pytest.approx(0.7)
+
+
 def test_likely_scenic_fallback_respects_category_boost():
     base_weight = get_poi_weight({"historic": "unknown_but_scenicish"})
     boosted_weight = get_poi_weight({"historic": "unknown_but_scenicish"}, {"historic_sites": 1.5})

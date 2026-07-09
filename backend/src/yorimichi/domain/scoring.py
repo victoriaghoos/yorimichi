@@ -50,6 +50,8 @@ POI_TYPE_WEIGHTS = {
     "riverbank": (0.6, "waterside"),
 
     # nature (new)
+    "tree": (0.5, "nature"),
+    "tree_row": (0.55, "nature"),
     "wood": (0.6, "nature"),
     "forest": (0.6, "nature"),
 
@@ -119,7 +121,15 @@ def get_poi_weight(row, category_boosts: dict[str, float] | None = None) -> floa
     in this mapping remain at neutral strength (1.0), so they still contribute.
     Example: {"nature": 1.5, "shrines_temples": 0.7}
     """
-    for tag_col in ("historic", "amenity", "leisure", "tourism", "building", "natural", "waterway"):
+    # Highly specific thematic signal: cherry blossom trees.
+    if row.get("genus") == "Cerasus":
+        return 1.0 * _category_multiplier("nature", category_boosts)
+
+    # Torii/gate tags deserve a strong shrine-temple pull.
+    if row.get("ceremonial_gate") == "torii" or row.get("man_made") == "ceremonial_gate":
+        return 1.0 * _category_multiplier("shrines_temples", category_boosts)
+
+    for tag_col in ("historic", "amenity", "leisure", "tourism", "building", "natural", "waterway", "landuse"):
         value = row.get(tag_col)
         if value is None:
             continue
