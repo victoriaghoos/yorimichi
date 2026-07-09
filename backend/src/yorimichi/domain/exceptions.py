@@ -26,3 +26,11 @@ class CoordinatesOutOfRangeException(DomainException):
             f"{label} coordinates ({lat}, {lon}) are {distance_meters:.0f}m from the "
             f"nearest known road in '{place}': coordinates may be outside this area."
         )
+
+
+class InvalidCategoryBoostException(DomainException):
+    """Raised when the category_boosts query parameter is malformed."""
+
+    def __init__(self, detail: str):
+        self.detail = detail
+        super().__init__(detail)
