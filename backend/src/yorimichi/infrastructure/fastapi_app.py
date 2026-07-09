@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from yorimichi.application.plan_route_use_case import PlanScenicRouteUseCase
+from yorimichi.domain.category_boosts import parse_category_boosts
 from yorimichi.domain.exceptions import DomainException
 from yorimichi.infrastructure.api_models import RouteDTO, RouteResponse
 
@@ -65,7 +66,12 @@ def get_route(
 
     categories is kept as a backwards-compatible alias for boost_categories.
     """
-    category_boost_map = _parse_category_boosts(categories, boost_categories, category_boosts)
+    category_boost_map = parse_category_boosts(
+        categories,
+        boost_categories,
+        category_boosts,
+        default_boost_multiplier=DEFAULT_BOOST_MULTIPLIER,
+    )
     result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon), category_boost_map)
 
     return RouteResponse(
@@ -80,53 +86,3 @@ def get_route(
             coordinates=list(result.scenic_coordinates),
         ),
     )
-
-
-def _parse_category_boosts(
-    categories: str | None,
-    boost_categories: str | None,
-    category_boosts: str | None,
-) -> dict[str, float] | None:
-    boost_map: dict[str, float] = {}
-
-    for raw in (categories, boost_categories):
-        if not raw:
-            continue
-        for category in raw.split(","):
-            cleaned = category.strip()
-            if cleaned:
-                boost_map[cleaned] = DEFAULT_BOOST_MULTIPLIER
-
-    if category_boosts:
-        for item in category_boosts.split(","):
-            entry = item.strip()
-            if not entry:
-                continue
-
-            if ":" not in entry:
-                raise DomainException(
-                    f"Invalid category_boosts entry '{entry}'. Use 'category:multiplier'."
-                )
-
-            category, raw_multiplier = entry.split(":", maxsplit=1)
-            category_name = category.strip()
-            if not category_name:
-                raise DomainException(
-                    f"Invalid category_boosts entry '{entry}'. Category name is empty."
-                )
-
-            try:
-                multiplier = float(raw_multiplier)
-            except ValueError as exc:
-                raise DomainException(
-                    f"Invalid multiplier '{raw_multiplier}' for category '{category_name}'."
-                ) from exc
-
-            if multiplier <= 0:
-                raise DomainException(
-                    f"Invalid multiplier '{multiplier}' for category '{category_name}'. Must be > 0."
-                )
-
-            boost_map[category_name] = multiplier
-
-    return boost_map or None
