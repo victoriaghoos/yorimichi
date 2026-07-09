@@ -11,7 +11,6 @@ from yorimichi.domain.scoring import (
     BUSY_ROAD_PENALTIES,
     DEFAULT_POI_WEIGHT,
     LIKELY_SCENIC_FALLBACK_WEIGHT,
-    NEUTRAL_WEIGHT,
     compute_scenic_penalty,
     get_poi_weight,
     get_road_penalty,
@@ -80,27 +79,37 @@ def test_new_historic_categories_have_expected_weights():
     assert get_poi_weight({"historic": "substation"}) == DEFAULT_POI_WEIGHT
 
 
-def test_filtered_out_known_category_becomes_fully_neutral():
-    assert get_poi_weight({"historic": "temple"}, {"parks"}) == NEUTRAL_WEIGHT
+def test_known_category_can_be_boosted():
+    base_weight = get_poi_weight({"historic": "temple"})
+    boosted_weight = get_poi_weight({"historic": "temple"}, {"shrines_temples": 1.5})
+
+    assert boosted_weight == pytest.approx(base_weight * 1.5)
 
 
-def test_active_category_keeps_its_real_weight():
-    assert get_poi_weight({"leisure": "park"}, {"parks"}) == 0.6
+def test_non_boosted_category_stays_at_normal_strength():
+    assert get_poi_weight({"leisure": "park"}, {"nature": 1.5}) == 0.6
 
 
-def test_filtered_out_likely_scenic_fallback_becomes_fully_neutral():
-    assert get_poi_weight({"historic": "unknown_but_scenicish"}, {"parks"}) == NEUTRAL_WEIGHT
-    assert get_poi_weight({"historic": "unknown_but_scenicish"}) == LIKELY_SCENIC_FALLBACK_WEIGHT
+def test_likely_scenic_fallback_respects_category_boost():
+    base_weight = get_poi_weight({"historic": "unknown_but_scenicish"})
+    boosted_weight = get_poi_weight({"historic": "unknown_but_scenicish"}, {"historic_sites": 1.5})
+
+    assert base_weight == LIKELY_SCENIC_FALLBACK_WEIGHT
+    assert boosted_weight == pytest.approx(base_weight * 1.5)
 
 
-def test_filtered_out_religious_fallback_becomes_fully_neutral():
-    assert get_poi_weight({"religion": "shinto"}, {"parks"}) == NEUTRAL_WEIGHT
-    assert get_poi_weight({"religion": "shinto"}, {"shrines_temples"}) == 1.0
+def test_religious_fallback_respects_category_boost():
+    base_weight = get_poi_weight({"religion": "shinto"})
+    boosted_weight = get_poi_weight({"religion": "shinto"}, {"shrines_temples": 0.7})
+
+    assert base_weight == 1.0
+    assert boosted_weight == pytest.approx(0.7)
 
 
-def test_filtered_out_wikipedia_fallback_becomes_fully_neutral():
-    assert get_poi_weight({"wikipedia": "ja:Some Landmark"}, {"parks"}) == NEUTRAL_WEIGHT
+def test_wikipedia_fallback_respects_historic_sites_boost():
     assert get_poi_weight({"wikipedia": "ja:Some Landmark"}) == 0.9
+    assert get_poi_weight({"wikipedia": "ja:Some Landmark"}, {"historic_sites": 1.5}) == pytest.approx(1.35)
+    assert get_poi_weight({"wikidata": "Q123"}, {"historic_sites": 0.7}) == pytest.approx(0.63)
 
 
 def test_busy_road_increases_edge_cost():

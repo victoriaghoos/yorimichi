@@ -41,11 +41,11 @@ class FakeScenicDataProvider:
     def __init__(self, fixed_penalty=1.0):
         self.fixed_penalty = fixed_penalty
         self.loaded_place = None
-        self.loaded_categories = None
+        self.loaded_category_boosts = None
 
-    def load(self, place, categories=None):
+    def load(self, place, category_boosts=None):
         self.loaded_place = place
-        self.loaded_categories = categories
+        self.loaded_category_boosts = category_boosts
 
     def get_scenic_penalty(self, lat, lon):
         return self.fixed_penalty
@@ -94,6 +94,17 @@ def test_execute_loads_scenic_data_for_the_given_place(simple_graph):
     use_case.execute("Higashiyama Ward, Kyoto, Japan", (35.000, 135.000), (35.001, 135.001))
 
     assert scenic_provider.loaded_place == "Higashiyama Ward, Kyoto, Japan"
+
+
+def test_execute_passes_category_boosts_to_scenic_provider(simple_graph):
+    graph_repo = FakeGraphRepository(simple_graph)
+    scenic_provider = FakeScenicDataProvider()
+    use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
+
+    boosts = {"nature": 1.5, "shrines_temples": 0.7}
+    use_case.execute("Higashiyama Ward, Kyoto, Japan", (35.000, 135.000), (35.001, 135.001), boosts)
+
+    assert scenic_provider.loaded_category_boosts == boosts
 
 
 def test_execute_never_exposes_raw_graph():

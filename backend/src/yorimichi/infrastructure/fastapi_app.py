@@ -24,6 +24,7 @@ app.add_middleware(
 )
 
 _use_case: PlanScenicRouteUseCase | None = None
+DEFAULT_BOOST_MULTIPLIER = 1.5
 
 
 def configure(use_case: PlanScenicRouteUseCase):
@@ -51,15 +52,21 @@ def get_route(
     dest_lat: float,
     dest_lon: float,
     categories: str | None = None,
+    boost_categories: str | None = None,
+    category_boosts: str | None = None,
     use_case: PlanScenicRouteUseCase = Depends(get_use_case),
 ) -> RouteResponse:
     """
-    categories: optional comma-separated list of active scenic categories
-    (e.g. "shrines_temples,parks"). If omitted, all categories are active
-    (default, unfiltered behavior).
+    boost_categories: optional comma-separated list of categories to boost
+    using DEFAULT_BOOST_MULTIPLIER (e.g. "nature,parks").
+
+    category_boosts: optional explicit comma-separated mapping in the form
+    "category:multiplier" (e.g. "nature:1.5,shrines_temples:0.7").
+
+    categories is kept as a backwards-compatible alias for boost_categories.
     """
-    category_list = categories.split(",") if categories else None
-    result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon), category_list)
+    category_boost_map = _parse_category_boosts(categories, boost_categories, category_boosts)
+    result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon), category_boost_map)
 
     return RouteResponse(
         baseline=RouteDTO(
@@ -73,3 +80,53 @@ def get_route(
             coordinates=list(result.scenic_coordinates),
         ),
     )
+
+
+def _parse_category_boosts(
+    categories: str | None,
+    boost_categories: str | None,
+    category_boosts: str | None,
+) -> dict[str, float] | None:
+    boost_map: dict[str, float] = {}
+
+    for raw in (categories, boost_categories):
+        if not raw:
+            continue
+        for category in raw.split(","):
+            cleaned = category.strip()
+            if cleaned:
+                boost_map[cleaned] = DEFAULT_BOOST_MULTIPLIER
+
+    if category_boosts:
+        for item in category_boosts.split(","):
+            entry = item.strip()
+            if not entry:
+                continue
+
+            if ":" not in entry:
+                raise DomainException(
+                    f"Invalid category_boosts entry '{entry}'. Use 'category:multiplier'."
+                )
+
+            category, raw_multiplier = entry.split(":", maxsplit=1)
+            category_name = category.strip()
+            if not category_name:
+                raise DomainException(
+                    f"Invalid category_boosts entry '{entry}'. Category name is empty."
+                )
+
+            try:
+                multiplier = float(raw_multiplier)
+            except ValueError as exc:
+                raise DomainException(
+                    f"Invalid multiplier '{raw_multiplier}' for category '{category_name}'."
+                ) from exc
+
+            if multiplier <= 0:
+                raise DomainException(
+                    f"Invalid multiplier '{multiplier}' for category '{category_name}'. Must be > 0."
+                )
+
+            boost_map[category_name] = multiplier
+
+    return boost_map or None

@@ -53,7 +53,7 @@ POI_TYPE_WEIGHTS = {
     "wood": (0.6, "nature"),
     "forest": (0.6, "nature"),
 
-    # lower-confidence / generic — no category, always neutral-ish, unaffected by filters
+    # lower-confidence / generic — no category-specific boost unless explicitly mapped
     "memorial": (0.65, "memorials"),
     "house": (0.4, "generic"),
 }
@@ -81,7 +81,6 @@ EXCLUDED_VALUES = {
 }
 
 DEFAULT_POI_WEIGHT = 0.4  # generic fallback for anything not covered above
-NEUTRAL_WEIGHT = 1.0  # fully neutral: no scenic discount at all
 
 # Penalty multiplier for busy/unattractive road types, based on OSM's `highway` tag.
 # Factor > 1.0 makes these edges more "expensive" in the scenic-weighted cost,
@@ -96,18 +95,29 @@ BUSY_ROAD_PENALTIES = {
 }
 DEFAULT_ROAD_PENALTY = 1.0  # neutral: no penalty, no discount
 
-def get_poi_weight(row, active_categories: set[str] | None = None) -> float:
+LIKELY_SCENIC_FALLBACK_CATEGORIES = {
+    "historic": "historic_sites",
+    "tourism": "viewpoints",
+    "leisure": "parks",
+}
+
+
+def _category_multiplier(category: str, category_boosts: dict[str, float] | None) -> float:
+    if category_boosts is None:
+        return 1.0
+    return category_boosts.get(category, 1.0)
+
+
+def get_poi_weight(row, category_boosts: dict[str, float] | None = None) -> float:
     """
     Look up the scenic weight for a POI row. Prefers a small, curated set of
     high-confidence weights for known categories; falls back to a moderate
     "probably somewhat scenic" weight for unlisted-but-plausible values under
     likely-scenic keys, rather than immediately dropping to the generic default.
 
-    active_categories: if provided, only POI categories in this set contribute
-    any scenic weight: POIs in other categories are treated as fully neutral
-    (NEUTRAL_WEIGHT, i.e. no discount at all), not merely reduced.
-    "generic"-category POIs are unaffected by filtering. None means all
-    categories are active (default, unfiltered behavior).
+    category_boosts: optional per-category multipliers. Categories not present
+    in this mapping remain at neutral strength (1.0), so they still contribute.
+    Example: {"nature": 1.5, "shrines_temples": 0.7}
     """
     for tag_col in ("historic", "amenity", "leisure", "tourism", "building", "natural", "waterway"):
         value = row.get(tag_col)
@@ -116,24 +126,17 @@ def get_poi_weight(row, active_categories: set[str] | None = None) -> float:
 
         if value in POI_TYPE_WEIGHTS:
             weight, category = POI_TYPE_WEIGHTS[value]
-            if active_categories is not None and category != "generic" and category not in active_categories:
-                return NEUTRAL_WEIGHT
-            return weight
+            return weight * _category_multiplier(category, category_boosts)
 
         if value not in EXCLUDED_VALUES and tag_col in LIKELY_SCENIC_KEYS:
-            if active_categories is not None:
-                return NEUTRAL_WEIGHT
-            return LIKELY_SCENIC_FALLBACK_WEIGHT
+            fallback_category = LIKELY_SCENIC_FALLBACK_CATEGORIES.get(tag_col)
+            return LIKELY_SCENIC_FALLBACK_WEIGHT * _category_multiplier(fallback_category, category_boosts)
 
     if row.get("religion") in ("buddhist", "shinto"):
-        if active_categories is not None and "shrines_temples" not in active_categories:
-            return NEUTRAL_WEIGHT
-        return 1.0
+        return 1.0 * _category_multiplier("shrines_temples", category_boosts)
 
     if row.get("wikipedia") is not None or row.get("wikidata") is not None:
-        if active_categories is not None:
-            return NEUTRAL_WEIGHT
-        return 0.9
+        return 0.9 * _category_multiplier("historic_sites", category_boosts)
 
     return DEFAULT_POI_WEIGHT
 

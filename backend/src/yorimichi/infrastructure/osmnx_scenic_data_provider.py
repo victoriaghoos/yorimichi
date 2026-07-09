@@ -22,10 +22,11 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         self._weights = None
         self._loaded_key = None
 
-    def load(self, place: str, categories: list[str] | None = None):
-        active_categories = set(categories) if categories else None
-
-        cache_key = (place, tuple(sorted(categories)) if categories else None)
+    def load(self, place: str, category_boosts: dict[str, float] | None = None):
+        cache_key = (
+            place,
+            tuple(sorted(category_boosts.items())) if category_boosts else None,
+        )
 
         if cache_key == self._loaded_key:
             return
@@ -47,12 +48,10 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         coords = np.array([[pt.y, pt.x] for pt in centroids])
 
         self._weights = np.array([
-            get_poi_weight(row, active_categories) for _, row in scenic_gdf.iterrows()
+            get_poi_weight(row, category_boosts) for _, row in scenic_gdf.iterrows()
         ])
         self._tree = cKDTree(coords)
         self._loaded_key = cache_key
-
-    _call_count = 0
 
     def get_scenic_penalty(self, lat: float, lon: float) -> float:
         if self._tree is None:

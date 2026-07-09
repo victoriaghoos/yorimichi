@@ -38,11 +38,13 @@ class IGraphRepository(ABC):
 
 class IScenicDataProvider(ABC):
     @abstractmethod
-    def load(self, place: str, categories: list[str] | None = None):
+    def load(self, place: str, category_boosts: dict[str, float] | None = None):
         """
-        Loads/prepares scenic data for the given place. If categories is
-        provided, only those scenic categories are weighted; others fall
-        back to the neutral default. None means all categories (default behavior).
+        Loads/prepares scenic data for the given place.
+
+        category_boosts applies a multiplier per category (e.g. {"nature": 1.5}),
+        where 1.0 keeps the normal strength, >1.0 boosts and <1.0 weakens.
+        Categories not listed are treated as 1.0 (neutral, still counted).
         """
         raise NotImplementedError
 
