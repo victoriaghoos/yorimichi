@@ -1,0 +1,254 @@
+.route-map-shell {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+}
+
+.control-panel-wrap {
+  position: absolute;
+  top: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.control-panel-wrap.left {
+  left: 12px;
+}
+
+.control-panel-wrap.right {
+  right: 12px;
+  left: auto;
+  flex-direction: row-reverse;
+}
+
+.panel-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #94a3b8;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.panel-toggle:hover {
+  background: #ffffff;
+}
+
+.control-panel {
+  width: min(340px, calc(100vw - 72px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.22);
+  padding: 12px;
+  text-align: left;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.dock-toggle {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 8px;
+  font-size: 14px;
+  width: 32px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.status-box {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.status-metrics {
+  display: grid;
+  gap: 4px;
+}
+
+.status-info {
+  color: #334155;
+}
+
+.status-error {
+  color: #b91c1c;
+}
+
+.metric-dot,
+.legend-dot {
+  display: inline-block;
+  border-radius: 999px;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.metric-dot.scenic,
+.legend-dot.scenic {
+  background: #f59e0b;
+}
+
+.metric-dot.baseline,
+.legend-dot.baseline {
+  background: #2563eb;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 3px solid transparent;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.legend-line.baseline {
+  border-top-color: #2563eb;
+  border-top-style: dashed;
+}
+
+.legend-line.scenic {
+  border-top-color: #f59e0b;
+  border-top-style: solid;
+}
+
+.route-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.map-action-btn {
+  border: 1px solid #94a3b8;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.map-action-btn.secondary {
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.category-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 6px;
+  min-height: 94px;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.category-card.active {
+  border: 2px solid #0f766e;
+  background: #ecfeff;
+}
+
+.category-emoji-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.category-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.active-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.category-jp {
+  font-size: 12px;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.category-sub {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  .control-panel-wrap.left,
+  .control-panel-wrap.right {
+    left: 10px;
+    right: auto;
+    top: 10px;
+    flex-direction: row;
+  }
+
+  .control-panel {
+    width: min(320px, calc(100vw - 68px));
+    max-height: 58vh;
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

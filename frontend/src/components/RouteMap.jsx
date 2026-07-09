@@ -6,6 +6,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import ClickHandler from './ClickHandler'
 import MapFlyTo from './MapFlyTo'
+import './RouteMap.css'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -16,14 +17,29 @@ L.Icon.Default.mergeOptions({
 
 const HIGASHIYAMA_CENTER = [34.9949, 135.7850]
 const PLACE = 'Higashiyama Ward, Kyoto, Japan'
+const MOBILE_BREAKPOINT = 768
+
+const ROUTE_STYLES = {
+  baseline: {
+    color: '#2563eb',
+    weight: 5,
+    opacity: 0.86,
+    dashArray: '10 8',
+  },
+  scenic: {
+    color: '#f59e0b',
+    weight: 6,
+    opacity: 0.94,
+  },
+}
 
 const SCENIC_CATEGORIES = [
-  { key: 'shrines_temples', label: '⛩️ 神社仏閣', sublabel: 'Shrines & Temples' },
-  { key: 'parks', label: '🌸 公園・緑地', sublabel: 'Parks & Green Spaces' },
-  { key: 'waterside', label: '🌊 水辺', sublabel: 'Waterside' },
-  { key: 'historic_sites', label: '🏯 史跡', sublabel: 'Historic Sites' },
-  { key: 'nature', label: '🌳 自然', sublabel: 'Nature' },
-  { key: 'viewpoints', label: '🌉 景観スポット', sublabel: 'Scenic Viewpoints' },
+  { key: 'shrines_temples', emoji: '⛩️', jpLabel: '神社仏閣', sublabel: 'Shrines & Temples' },
+  { key: 'parks', emoji: '🌸', jpLabel: '公園・緑地', sublabel: 'Parks & Green Spaces' },
+  { key: 'waterside', emoji: '🌊', jpLabel: '水辺', sublabel: 'Waterside' },
+  { key: 'historic_sites', emoji: '🏯', jpLabel: '史跡', sublabel: 'Historic Sites' },
+  { key: 'nature', emoji: '🌳', jpLabel: '自然', sublabel: 'Nature' },
+  { key: 'viewpoints', emoji: '🌉', jpLabel: '景観スポット', sublabel: 'Scenic Viewpoints' },
 ]
 
 function RouteMap() {
@@ -33,6 +49,22 @@ function RouteMap() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [activeCategories, setActiveCategories] = useState(new Set())
+  const [panelExpanded, setPanelExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.innerWidth > MOBILE_BREAKPOINT
+  })
+  const [panelRight, setPanelRight] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
+    const handleChange = (event) => {
+      setPanelExpanded(!event.matches)
+    }
+
+    handleChange(media)
+    media.addEventListener('change', handleChange)
+    return () => media.removeEventListener('change', handleChange)
+  }, [])
 
   const toggleCategory = useCallback((categoryKey) => {
     setActiveCategories((prev) => {
@@ -141,22 +173,23 @@ function RouteMap() {
   const scenicCoordinates = routeData?.scenic?.coordinates ?? []
 
   const getStatusMessage = () => {
-    if (error) return { text: `Error: ${error}`, color: '#b91c1c' }
-    if (loading) return { text: 'Loading route...', color: '#334155' }
+    if (error) return { kind: 'error', text: `Error: ${error}` }
+    if (loading) return { kind: 'info', text: 'Loading route...' }
     if (routeData) {
       return {
-        text: `Scenic: ${routeData.scenic.length_meters.toFixed(1)} m — Baseline: ${routeData.baseline.length_meters.toFixed(1)} m`,
-        color: '#334155',
+        kind: 'metrics',
+        scenic: routeData.scenic.length_meters.toFixed(1),
+        baseline: routeData.baseline.length_meters.toFixed(1),
       }
     }
-    if (origin && !destination) return { text: 'Click the map to set your destination.', color: '#334155' }
-    return { text: 'Click the map, or use your location, to set a starting point.', color: '#334155' }
+    if (origin && !destination) return { kind: 'info', text: 'Click the map to set your destination.' }
+    return { kind: 'info', text: 'Click the map, or use your location, to set a starting point.' }
   }
 
   const status = getStatusMessage()
 
   return (
-    <div style={{ position: 'relative', height: '100vh', width: '100%' }}>
+    <div className="route-map-shell">
       <MapContainer center={HIGASHIYAMA_CENTER} zoom={15} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -178,64 +211,96 @@ function RouteMap() {
         )}
 
         {baselineCoordinates.length > 1 && (
-          <Polyline positions={baselineCoordinates} pathOptions={{ color: '#64748b', weight: 5, opacity: 0.85 }} />
+          <Polyline positions={baselineCoordinates} pathOptions={ROUTE_STYLES.baseline} />
         )}
         {scenicCoordinates.length > 1 && (
-          <Polyline positions={scenicCoordinates} pathOptions={{ color: '#0f766e', weight: 6, opacity: 0.95 }} />
+          <Polyline positions={scenicCoordinates} pathOptions={ROUTE_STYLES.scenic} />
         )}
       </MapContainer>
 
-      <div
-        style={{
-          position: 'absolute',
-          top: 12,
-          left: 12,
-          zIndex: 1000,
-          background: 'rgba(255, 255, 255, 0.92)',
-          borderRadius: 10,
-          padding: '10px 12px',
-          border: '1px solid #cbd5e1',
-          textAlign: 'left',
-          fontSize: 13,
-          lineHeight: 1.4,
-          maxWidth: 360,
-        }}
-      >
-        <div style={{ color: status.color }}>{status.text}</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button onClick={handleUseMyLocation} style={{ fontSize: 12, padding: '4px 8px', cursor: 'pointer' }}>
-            Use my location
-          </button>
-          {(origin || destination) && (
-            <button onClick={handleReset} style={{ fontSize: 12, padding: '4px 8px', cursor: 'pointer' }}>
-              Reset
-            </button>
-          )}
-        </div>
+      <div className={`control-panel-wrap ${panelRight ? 'right' : 'left'} ${panelExpanded ? 'expanded' : 'collapsed'}`}>
+        <button
+          className="panel-toggle"
+          onClick={() => setPanelExpanded((prev) => !prev)}
+          aria-label={panelExpanded ? 'Collapse panel' : 'Expand panel'}
+          title={panelExpanded ? 'Collapse panel' : 'Expand panel'}
+        >
+          {panelExpanded ? '▾' : '≡'}
+        </button>
 
-        <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {SCENIC_CATEGORIES.map((category) => {
-            const isActive = activeCategories.has(category.key)
-            return (
+        {panelExpanded && (
+          <div className="control-panel">
+            <div className="panel-head">
+              <h2>Route Controls</h2>
               <button
-                key={category.key}
-                onClick={() => toggleCategory(category.key)}
-                title={category.sublabel}
-                style={{
-                  fontSize: 11,
-                  padding: '4px 8px',
-                  cursor: 'pointer',
-                  borderRadius: 6,
-                  border: isActive ? '2px solid #0f766e' : '1px solid #cbd5e1',
-                  background: isActive ? '#ccfbf1' : '#ffffff',
-                  fontWeight: isActive ? 600 : 400,
-                }}
+                className="dock-toggle"
+                onClick={() => setPanelRight((prev) => !prev)}
+                aria-label="Move panel side"
+                title="Move panel side"
               >
-                {category.label}
+                ↔
               </button>
-            )
-          })}
-        </div>
+            </div>
+
+            <div className="status-box">
+              {status.kind === 'metrics' ? (
+                <div className="status-metrics">
+                  <div>
+                    <span className="metric-dot scenic" aria-hidden="true" /> Scenic: {status.scenic} m
+                  </div>
+                  <div>
+                    <span className="metric-dot baseline" aria-hidden="true" /> Baseline: {status.baseline} m
+                  </div>
+                </div>
+              ) : (
+                <div className={status.kind === 'error' ? 'status-error' : 'status-info'}>{status.text}</div>
+              )}
+            </div>
+
+            <div className="route-legend" aria-label="Route legend">
+              <span>
+                <span className="legend-line baseline" aria-hidden="true" />
+                <span className="legend-dot baseline" aria-hidden="true" /> Baseline
+              </span>
+              <span>
+                <span className="legend-line scenic" aria-hidden="true" />
+                <span className="legend-dot scenic" aria-hidden="true" /> Scenic
+              </span>
+            </div>
+
+            <div className="action-row">
+              <button onClick={handleUseMyLocation} className="map-action-btn">
+                Use my location
+              </button>
+              {(origin || destination) && (
+                <button onClick={handleReset} className="map-action-btn secondary">
+                  Reset
+                </button>
+              )}
+            </div>
+
+            <div className="category-grid" role="group" aria-label="Scenic preference boosts">
+              {SCENIC_CATEGORIES.map((category) => {
+                const isActive = activeCategories.has(category.key)
+                return (
+                  <button
+                    key={category.key}
+                    onClick={() => toggleCategory(category.key)}
+                    className={`category-card ${isActive ? 'active' : ''}`}
+                    aria-pressed={isActive}
+                  >
+                    <div className="category-emoji-row">
+                      <span className="category-emoji" aria-hidden="true">{category.emoji}</span>
+                      {isActive && <span className="active-check" aria-hidden="true">✓</span>}
+                    </div>
+                    <div className="category-jp">{category.jpLabel}</div>
+                    <div className="category-sub">{category.sublabel}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
