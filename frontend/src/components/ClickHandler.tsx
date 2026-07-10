@@ -1,6 +1,10 @@
 import { useMapEvents } from 'react-leaflet'
 
-function ClickHandler({ onMapClick }) {
+interface ClickHandlerProps {
+  onMapClick: (lat: number, lon: number) => void
+}
+
+function ClickHandler({ onMapClick }: ClickHandlerProps) {
   useMapEvents({
     click(event) {
       onMapClick(event.latlng.lat, event.latlng.lng)

@@ -1,13 +1,16 @@
 import { useEffect, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
-import L from 'leaflet'
+import L, { type PathOptions } from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import ClickHandler from './ClickHandler'
 import MapFlyTo from './MapFlyTo'
 import './RouteMap.css'
+import type { Coordinate, RouteResponse, ScenicCategory, StatusMessage } from '../types'
 
+// @ts-expect-error — Leaflet's default icon setup requires deleting this internal property,
+// which isn't part of Leaflet's public TypeScript definitions.
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -15,11 +18,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 })
 
-const HIGASHIYAMA_CENTER = [34.9949, 135.7850]
+const HIGASHIYAMA_CENTER: [number, number] = [34.9949, 135.7850]
 const PLACE = 'Higashiyama Ward, Kyoto, Japan'
 const MOBILE_BREAKPOINT = 768
 
-const ROUTE_STYLES = {
+const ROUTE_STYLES: Record<'baseline' | 'scenic', PathOptions> = {
   baseline: {
     color: '#2563eb',
     weight: 5,
@@ -33,7 +36,7 @@ const ROUTE_STYLES = {
   },
 }
 
-const SCENIC_CATEGORIES = [
+const SCENIC_CATEGORIES: ScenicCategory[] = [
   { key: 'shrines_temples', emoji: '⛩️', jpLabel: '神社仏閣', sublabel: 'Shrines & Temples' },
   { key: 'parks', emoji: '🌸', jpLabel: '公園・緑地', sublabel: 'Parks & Green Spaces' },
   { key: 'waterside', emoji: '🌊', jpLabel: '水辺', sublabel: 'Waterside' },
@@ -43,13 +46,13 @@ const SCENIC_CATEGORIES = [
 ]
 
 function RouteMap() {
-  const [origin, setOrigin] = useState(null)
-  const [destination, setDestination] = useState(null)
-  const [routeData, setRouteData] = useState(null)
-  const [error, setError] = useState(null)
+  const [origin, setOrigin] = useState<Coordinate | null>(null)
+  const [destination, setDestination] = useState<Coordinate | null>(null)
+  const [routeData, setRouteData] = useState<RouteResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [activeCategories, setActiveCategories] = useState(new Set())
-  const [panelExpanded, setPanelExpanded] = useState(() => {
+  const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set())
+  const [panelExpanded, setPanelExpanded] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     return window.innerWidth > MOBILE_BREAKPOINT
   })
@@ -57,7 +60,7 @@ function RouteMap() {
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
-    const handleChange = (event) => {
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
       setPanelExpanded(!event.matches)
     }
 
@@ -66,7 +69,7 @@ function RouteMap() {
     return () => media.removeEventListener('change', handleChange)
   }, [])
 
-  const toggleCategory = useCallback((categoryKey) => {
+  const toggleCategory = useCallback((categoryKey: string) => {
     setActiveCategories((prev) => {
       const next = new Set(prev)
       if (next.has(categoryKey)) {
@@ -78,7 +81,7 @@ function RouteMap() {
     })
   }, [])
 
-  const handleMapClick = useCallback((lat, lon) => {
+  const handleMapClick = useCallback((lat: number, lon: number) => {
     if (!origin) {
       setOrigin({ lat, lon })
       setDestination(null)
@@ -130,12 +133,12 @@ function RouteMap() {
       setLoading(true)
       setError(null)
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
-      const params = {
+      const params: Record<string, string> = {
         place: PLACE,
-        orig_lat: origin.lat,
-        orig_lon: origin.lon,
-        dest_lat: destination.lat,
-        dest_lon: destination.lon,
+        orig_lat: String(origin!.lat),
+        orig_lon: String(origin!.lon),
+        dest_lat: String(destination!.lat),
+        dest_lon: String(destination!.lon),
       }
       if (activeCategories.size > 0) {
         params.boost_categories = Array.from(activeCategories).join(',')
@@ -148,7 +151,7 @@ function RouteMap() {
           const detail = await response.text()
           throw new Error(`Route API failed (${response.status}): ${detail}`)
         }
-        const data = await response.json()
+        const data: RouteResponse = await response.json()
         if (!cancelled) {
           setRouteData(data)
         }
@@ -172,7 +175,7 @@ function RouteMap() {
   const baselineCoordinates = routeData?.baseline?.coordinates ?? []
   const scenicCoordinates = routeData?.scenic?.coordinates ?? []
 
-  const getStatusMessage = () => {
+  const getStatusMessage = (): StatusMessage => {
     if (error) return { kind: 'error', text: `Error: ${error}` }
     if (loading) return { kind: 'info', text: 'Loading route...' }
     if (routeData) {

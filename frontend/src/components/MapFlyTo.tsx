@@ -1,7 +1,13 @@
 import { useEffect } from 'react'
 import { useMap } from 'react-leaflet'
+import type { Coordinate } from '../types'
 
-function MapFlyTo({ position, zoom = 16 }) {
+interface MapFlyToProps {
+  position: Coordinate | null
+  zoom?: number
+}
+
+function MapFlyTo({ position, zoom = 16 }: MapFlyToProps) {
   const map = useMap()
 
   useEffect(() => {

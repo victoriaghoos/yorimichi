@@ -1,3 +1,4 @@
+// App.tsx
 import RouteMap from './components/RouteMap'
 
 function App() {
