@@ -53,10 +53,11 @@ The backend is a fully self-contained, independently testable service, the front
 
 | Component | Technology | Why? |
 | :--- | :--- | :--- |
-| **Framework** | **React + Vite** | Fast dev experience; reuses existing React expertise. |
+| **Framework** | **React + Vite + TypeScript** | Fast dev experience; static typing catches data-shape mismatches (e.g. a renamed backend field) at compile time rather than silently producing `undefined` in the UI. |
 | **Map** | **react-leaflet** | Interactive map rendering, consuming the backend's `/route` endpoint. |
 | **PWA** | **vite-plugin-pwa** | Installable, offline-tolerant experience for mobile use while walking/cycling. |
-| **Live location** | **Browser Geolocation API** (`watchPosition`) | Real-time position tracking during an active route, no extra dependency needed. |
+| **Live location** | **Browser Geolocation API** | Real-time position tracking during an active route, no extra dependency needed. |
+| **Accessibility** | Custom CSS, color-blind-safe palette | Blue/orange route colors plus line-style differentiation (dashed/solid) instead of color alone. |
 
 **Dependency injection** is handled via plain constructor injection at the composition root: no DI framework. In a hexagonal architecture this small, an explicit factory function wiring concrete adapters into ports is clearer and easier to reason about than an additional library.
 
@@ -171,6 +172,7 @@ Built incrementally, proving the core idea before adding infrastructure complexi
     - [x] GPS-based start point (via browser Geolocation API)
     - [x] Filterable/boostable scenic categories (⛩️ shrines & temples, 🌸 parks, 🌊 waterside, 🏯 historic sites, 🌳 nature, 🌉 viewpoints), passed as parameters to `/route`. Implemented as a **multiplicative boost model**, not binary filtering: an inactive category remains at neutral strength (still contributes) rather than being silenced entirely. This was a deliberate correction after discovering that pure on/off filtering had no measurable effect on route selection in Higashiyama, where `shrines_temples` is overwhelmingly dominant, muting other categories wasn't enough to shift A*'s choice, since the strongest signal remained untouched. Boost strength is configurable per request (`boost_categories` for a default 1.5× multiplier, or explicit `category:multiplier` pairs via `category_boosts`), validated end-to-end with real, dramatic route divergence. Category weighting was further refined using an empirical tag-frequency analysis of the full Kansai region `.osm.pbf` extract (8M+ tagged elements): added `natural=tree` (51k+ occurrences, previously missing entirely), `landuse=forest`, `natural=tree_row`, and two thematic signals specific to this project — `genus=Cerasus` (cherry blossom trees) and `ceremonial_gate=torii`, both scored at maximum weight.
     - [x] Accessible route visualization: color-blind-safe blue/orange palette (replacing an initial red/green scheme) plus a redundant visual signal (dashed baseline vs. solid scenic line), so routes remain distinguishable independent of color perception.
+    - [x] Migrated to TypeScript for stronger data-contract guarantees between frontend and backend (shared `RouteResponse`/`RouteDTO`/`Coordinate` types mirroring the backend's Pydantic models), plus a responsive, collapsible control panel that adapts its default state to viewport width, addressing the practical constraint that a permanently-expanded desktop-style panel would obscure most of the map on a phone screen during actual on-foot use.
     - [ ] Walking vs. cycling mode (requires a backend extension: `network_type` parameter on graph fetching, currently hardcoded to `"walk"`)
     - [ ] PWA installability and offline tolerance for mobile use
     - [ ] Live route tracking via the Geolocation API while walking
