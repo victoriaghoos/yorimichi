@@ -7,20 +7,11 @@
 .control-panel-wrap {
   position: absolute;
   top: 12px;
+  right: 12px;
   z-index: 1000;
   display: flex;
   align-items: flex-start;
   gap: 8px;
-}
-
-.control-panel-wrap.left {
-  left: 12px;
-}
-
-.control-panel-wrap.right {
-  right: 12px;
-  left: auto;
-  flex-direction: row-reverse;
 }
 
 .panel-toggle {
@@ -65,17 +56,6 @@
   margin: 0;
   font-size: 14px;
   color: #0f172a;
-}
-
-.dock-toggle {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
-  border-radius: 8px;
-  font-size: 14px;
-  width: 32px;
-  height: 28px;
-  cursor: pointer;
 }
 
 .status-box {
@@ -235,12 +215,9 @@
 }
 
 @media (max-width: 768px) {
-  .control-panel-wrap.left,
-  .control-panel-wrap.right {
-    left: 10px;
-    right: auto;
+  .control-panel-wrap {
+    right: 10px;
     top: 10px;
-    flex-direction: row;
   }
 
   .control-panel {

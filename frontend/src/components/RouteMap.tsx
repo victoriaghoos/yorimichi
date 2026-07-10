@@ -56,7 +56,6 @@ function RouteMap() {
     if (typeof window === 'undefined') return true
     return window.innerWidth > MOBILE_BREAKPOINT
   })
-  const [panelRight, setPanelRight] = useState(false)
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
@@ -121,6 +120,7 @@ function RouteMap() {
     setOrigin(null)
     setDestination(null)
     setRouteData(null)
+    setActiveCategories(new Set())
     setError(null)
   }, [])
 
@@ -221,7 +221,7 @@ function RouteMap() {
         )}
       </MapContainer>
 
-      <div className={`control-panel-wrap ${panelRight ? 'right' : 'left'} ${panelExpanded ? 'expanded' : 'collapsed'}`}>
+      <div className={`control-panel-wrap ${panelExpanded ? 'expanded' : 'collapsed'}`}>
         <button
           className="panel-toggle"
           onClick={() => setPanelExpanded((prev) => !prev)}
@@ -235,14 +235,6 @@ function RouteMap() {
           <div className="control-panel">
             <div className="panel-head">
               <h2>Route Controls</h2>
-              <button
-                className="dock-toggle"
-                onClick={() => setPanelRight((prev) => !prev)}
-                aria-label="Move panel side"
-                title="Move panel side"
-              >
-                ↔
-              </button>
             </div>
 
             <div className="status-box">
