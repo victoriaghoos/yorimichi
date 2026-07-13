@@ -27,19 +27,18 @@ class PlanScenicRouteUseCase:
 
     def execute(
         self,
-        place: str,
         orig_point: tuple[float, float],
         dest_point: tuple[float, float],
         category_boosts: dict[str, float] | None = None,
     ) -> PlanRouteResult:
-        graph = self._graph_repo.get_graph(place, orig_point=orig_point, dest_point=dest_point)
-        self._scenic_provider.load(place, category_boosts)
+        graph = self._graph_repo.get_graph(orig_point, dest_point)
+        self._scenic_provider.load(orig_point, dest_point, category_boosts)
 
         orig_node = self._graph_repo.nearest_node(graph, orig_point[0], orig_point[1])
         dest_node = self._graph_repo.nearest_node(graph, dest_point[0], dest_point[1])
 
-        self._validate_within_range("Origin", orig_point, orig_node, place)
-        self._validate_within_range("Destination", dest_point, dest_node, place)
+        self._validate_within_range("Origin", orig_point, orig_node)
+        self._validate_within_range("Destination", dest_point, dest_node)
 
         baseline_route = self._graph_repo.find_shortest_route(graph, orig_node, dest_node)
         scenic_route = self._graph_repo.find_scenic_route(graph, orig_node, dest_node, self._scenic_provider)
@@ -83,7 +82,7 @@ class PlanScenicRouteUseCase:
             coordinates.append((node_data["y"], node_data["x"]))
         return tuple(coordinates)
 
-    def _validate_within_range(self, label: str, point: tuple[float, float], nearest_node, place: str):
+    def _validate_within_range(self, label: str, point: tuple[float, float], nearest_node):
         distance = haversine_distance(point[0], point[1], nearest_node.lat, nearest_node.lon)
         if distance > MAX_REASONABLE_DISTANCE_METERS:
-            raise CoordinatesOutOfRangeException(label, point[0], point[1], distance, place)
+            raise CoordinatesOutOfRangeException(label, point[0], point[1], distance, "route corridor")

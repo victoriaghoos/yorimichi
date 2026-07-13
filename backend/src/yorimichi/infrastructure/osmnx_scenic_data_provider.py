@@ -3,11 +3,12 @@ Infrastructure adapter: concrete IScenicDataProvider implementation.
 Wraps OSMnx feature-fetching and the KD-tree lookup, exposing only the
 Domain-facing get_scenic_penalty() contract: no tree/weights ever leak out.
 
-Caches loaded data per place, so repeated load() calls for the same place
-(e.g. multiple route requests within one session) don't redundantly re-fetch
-and re-index the same scenic data.
+Caches loaded data per route corridor (bbox) + category boosts, so repeated
+load() calls for the same request area don't redundantly re-fetch and
+re-index scenic data.
 """
 
+import math
 import osmnx as ox
 import numpy as np
 from scipy.spatial import cKDTree
@@ -17,14 +18,23 @@ from yorimichi.domain.scoring import get_poi_weight, compute_scenic_penalty
 
 
 class OSMnxScenicDataProvider(IScenicDataProvider):
+    _SCENIC_MARGIN_METERS = 1500.0
+
     def __init__(self):
         self._tree = None
         self._weights = None
         self._loaded_key = None
 
-    def load(self, place: str, category_boosts: dict[str, float] | None = None):
+    def load(
+        self,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
+        category_boosts: dict[str, float] | None = None,
+    ):
+        min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
+        bbox = (min_lon, min_lat, max_lon, max_lat)
         cache_key = (
-            place,
+            f"{min_lat:.6f}|{min_lon:.6f}|{max_lat:.6f}|{max_lon:.6f}",
             tuple(sorted(category_boosts.items())) if category_boosts else None,
         )
 
@@ -44,7 +54,13 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
             "ceremonial_gate": ["torii"],
             "man_made": ["ceremonial_gate"],
         }
-        scenic_gdf = ox.features_from_place(place, tags)
+        scenic_gdf = ox.features_from_bbox(bbox, tags=tags)
+
+        if scenic_gdf.empty:
+            self._tree = cKDTree(np.array([[0.0, 0.0]]))
+            self._weights = np.array([0.0])
+            self._loaded_key = cache_key
+            return
 
         projected = ox.projection.project_gdf(scenic_gdf)
         centroids_projected = projected.geometry.centroid
@@ -56,6 +72,25 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         ])
         self._tree = cKDTree(coords)
         self._loaded_key = cache_key
+
+    def _compute_bbox(
+        self,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
+    ) -> tuple[float, float, float, float]:
+        orig_lat, orig_lon = orig_point
+        dest_lat, dest_lon = dest_point
+
+        center_lat = (orig_lat + dest_lat) / 2.0
+        lat_margin = self._SCENIC_MARGIN_METERS / 111_320.0
+        lon_denominator = max(111_320.0 * abs(math.cos(math.radians(center_lat))), 1.0)
+        lon_margin = self._SCENIC_MARGIN_METERS / lon_denominator
+
+        min_lat = min(orig_lat, dest_lat) - lat_margin
+        max_lat = max(orig_lat, dest_lat) + lat_margin
+        min_lon = min(orig_lon, dest_lon) - lon_margin
+        max_lon = max(orig_lon, dest_lon) + lon_margin
+        return min_lat, min_lon, max_lat, max_lon
 
     def get_scenic_penalty(self, lat: float, lon: float) -> float:
         if self._tree is None:

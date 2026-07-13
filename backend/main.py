@@ -17,8 +17,6 @@ from yorimichi.infrastructure import fastapi_app
 
 load_dotenv()
 
-PLACE = "Higashiyama Ward, Kyoto, Japan"
-
 TEST_PAIRS = [
     ("Kiyomizu-dera to Yasaka Shrine", (34.9949, 135.7850), (35.0038, 135.7788)),
     ("Kiyomizu-dera to Kodai-ji", (34.9949, 135.7850), (35.0028, 135.7795)),
@@ -61,9 +59,9 @@ def run_cli_demo():
     results = {}
     graphs_by_label = {}
     for label, orig_point, dest_point in TEST_PAIRS:
-        graph = _graph_repo.get_graph(PLACE, orig_point=orig_point, dest_point=dest_point)
+        graph = _graph_repo.get_graph(orig_point, dest_point)
         print(f"{label}: subgraph nodes={len(graph.nodes)}, edges={len(graph.edges)}")
-        result = _use_case.execute(PLACE, orig_point, dest_point)
+        result = _use_case.execute(orig_point, dest_point)
         print_route_comparison(label, result)
         results[label] = result
         graphs_by_label[label] = graph

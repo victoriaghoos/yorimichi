@@ -12,10 +12,10 @@ class FakeUseCase:
         self.should_raise = should_raise
         self.last_category_boosts = None
 
-    def execute(self, place, orig_point, dest_point, category_boosts=None):
+    def execute(self, orig_point, dest_point, category_boosts=None):
         self.last_category_boosts = category_boosts
         if self.should_raise:
-            raise CoordinatesOutOfRangeException("Origin", orig_point[0], orig_point[1], 14_000_000, place)
+            raise CoordinatesOutOfRangeException("Origin", orig_point[0], orig_point[1], 14_000_000, "route corridor")
         return PlanRouteResult(
             baseline_route=Route(node_ids=("1", "2", "3"), length=150.0),
             scenic_route=Route(node_ids=("1", "4", "3"), length=180.0),
@@ -30,7 +30,7 @@ def test_get_route_returns_200_with_valid_data():
     client = TestClient(fastapi_app.app)
 
     response = client.get("/route", params={
-        "place": "Fake Place", "orig_lat": 35.0, "orig_lon": 135.0,
+        "orig_lat": 35.0, "orig_lon": 135.0,
         "dest_lat": 35.001, "dest_lon": 135.001,
     })
 
@@ -49,7 +49,7 @@ def test_get_route_supports_boost_categories_param():
     client = TestClient(fastapi_app.app)
 
     response = client.get("/route", params={
-        "place": "Fake Place", "orig_lat": 35.0, "orig_lon": 135.0,
+        "orig_lat": 35.0, "orig_lon": 135.0,
         "dest_lat": 35.001, "dest_lon": 135.001,
         "boost_categories": "nature,parks",
     })
@@ -64,7 +64,7 @@ def test_get_route_supports_explicit_category_boosts_param():
     client = TestClient(fastapi_app.app)
 
     response = client.get("/route", params={
-        "place": "Fake Place", "orig_lat": 35.0, "orig_lon": 135.0,
+        "orig_lat": 35.0, "orig_lon": 135.0,
         "dest_lat": 35.001, "dest_lon": 135.001,
         "category_boosts": "nature:1.5,shrines_temples:0.7",
     })
@@ -79,7 +79,7 @@ def test_get_route_returns_400_for_invalid_category_boosts():
     client = TestClient(fastapi_app.app)
 
     response = client.get("/route", params={
-        "place": "Fake Place", "orig_lat": 35.0, "orig_lon": 135.0,
+        "orig_lat": 35.0, "orig_lon": 135.0,
         "dest_lat": 35.001, "dest_lon": 135.001,
         "category_boosts": "nature:not_a_number",
     })
@@ -93,7 +93,7 @@ def test_get_route_returns_400_for_out_of_range_coordinates():
     client = TestClient(fastapi_app.app)
 
     response = client.get("/route", params={
-        "place": "Fake Place", "orig_lat": 0.0, "orig_lon": 0.0,
+        "orig_lat": 0.0, "orig_lon": 0.0,
         "dest_lat": 35.001, "dest_lon": 135.001,
     })
 

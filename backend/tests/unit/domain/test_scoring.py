@@ -105,6 +105,17 @@ def test_landuse_forest_is_weighted_as_nature_and_respects_boosts():
     assert get_poi_weight({"landuse": "forest"}, {"nature": 1.5}) == pytest.approx(0.9)
 
 
+def test_waterside_values_are_weighted_and_respect_boosts():
+    assert get_poi_weight({"waterway": "river"}) == pytest.approx(0.85)
+    assert get_poi_weight({"waterway": "canal"}) == pytest.approx(0.7)
+    assert get_poi_weight({"waterway": "stream"}) == pytest.approx(0.65)
+    assert get_poi_weight({"waterway": "river"}, {"waterside": 1.5}) == pytest.approx(1.275)
+
+
+def test_ditch_is_not_treated_as_explicit_waterside():
+    assert get_poi_weight({"waterway": "ditch"}) == DEFAULT_POI_WEIGHT
+
+
 def test_cerasus_gets_priority_nature_weight_and_respects_boosts():
     assert get_poi_weight({"genus": "Cerasus"}) == 1.0
     assert get_poi_weight({"genus": "Cerasus"}, {"nature": 1.5}) == pytest.approx(1.5)

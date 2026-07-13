@@ -2,12 +2,12 @@
 Infrastructure adapter: concrete IGraphRepository implementation.
 Owns all networkx-specific routing execution (shortest_path, astar_path).
 
-Caches loaded graphs per place, so repeated get_graph() calls within one
-session (e.g. main.py fetching once for visualization, then the Use Case
-fetching again internally per route request) don't redundantly re-fetch
-and re-parse the same graph data.
+Caches loaded graphs per route corridor (origin/destination bbox), so repeated
+queries for the same area don't redundantly re-fetch and re-parse the same
+graph data.
 """
 
+import math
 import osmnx as ox
 import networkx as nx
 
@@ -17,18 +17,44 @@ from yorimichi.infrastructure.osmnx_routing_adapter import make_edge_weight_fn, 
 
 
 class OSMnxGraphRepository(IGraphRepository):
+    _SUBGRAPH_MARGIN_METERS = 1500.0
+
     def __init__(self):
         self._cached_graphs = {}
 
     def get_graph(
         self,
-        place: str,
-        orig_point: tuple[float, float] | None = None,
-        dest_point: tuple[float, float] | None = None,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
     ):
-        if place not in self._cached_graphs:
-            self._cached_graphs[place] = ox.graph_from_place(place, network_type="walk")
-        return self._cached_graphs[place]
+        min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
+        bbox = (min_lon, min_lat, max_lon, max_lat)
+        cache_key = f"{min_lat:.6f}|{min_lon:.6f}|{max_lat:.6f}|{max_lon:.6f}"
+        if cache_key not in self._cached_graphs:
+            self._cached_graphs[cache_key] = ox.graph_from_bbox(
+                bbox,
+                network_type="walk",
+            )
+        return self._cached_graphs[cache_key]
+
+    def _compute_bbox(
+        self,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
+    ) -> tuple[float, float, float, float]:
+        orig_lat, orig_lon = orig_point
+        dest_lat, dest_lon = dest_point
+
+        center_lat = (orig_lat + dest_lat) / 2.0
+        lat_margin = self._SUBGRAPH_MARGIN_METERS / 111_320.0
+        lon_denominator = max(111_320.0 * abs(math.cos(math.radians(center_lat))), 1.0)
+        lon_margin = self._SUBGRAPH_MARGIN_METERS / lon_denominator
+
+        min_lat = min(orig_lat, dest_lat) - lat_margin
+        max_lat = max(orig_lat, dest_lat) + lat_margin
+        min_lon = min(orig_lon, dest_lon) - lon_margin
+        max_lon = max(orig_lon, dest_lon) + lon_margin
+        return min_lat, min_lon, max_lat, max_lon
 
     def nearest_node(self, graph, lat: float, lon: float) -> Node:
         node_id = ox.nearest_nodes(graph, lon, lat)

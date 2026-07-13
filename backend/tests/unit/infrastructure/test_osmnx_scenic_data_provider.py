@@ -53,12 +53,12 @@ def test_load_requests_expected_scenic_feature_tags(monkeypatch):
     scenic_gdf = pd.DataFrame([{"natural": "tree"}])
     scenic_gdf.crs = "EPSG:4326"
 
-    def fake_features_from_place(place, tags):
-        captured["place"] = place
+    def fake_features_from_bbox(bbox, tags):
+        captured["bbox"] = bbox
         captured["tags"] = tags
         return scenic_gdf
 
-    monkeypatch.setattr("yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_place", fake_features_from_place)
+    monkeypatch.setattr("yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox", fake_features_from_bbox)
     monkeypatch.setattr(
         "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.projection.project_gdf",
         lambda gdf: FakeProjectedGdf(FakeGeometrySeries()),
@@ -66,9 +66,9 @@ def test_load_requests_expected_scenic_feature_tags(monkeypatch):
     monkeypatch.setattr("yorimichi.infrastructure.osmnx_scenic_data_provider.cKDTree", FakeTree)
 
     provider = OSMnxScenicDataProvider()
-    provider.load("Fake Place")
+    provider.load((35.0, 135.0), (35.001, 135.001))
 
-    assert captured["place"] == "Fake Place"
+    assert "bbox" in captured
     assert captured["tags"]["natural"] == ["water", "wood", "tree", "tree_row"]
     assert captured["tags"]["landuse"] == ["forest"]
     assert captured["tags"]["genus"] == ["Cerasus"]

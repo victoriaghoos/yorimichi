@@ -17,7 +17,7 @@ class FakeGraphRepository:
         self._graph = graph
         self._real_repo = OSMnxGraphRepository()
 
-    def get_graph(self, place, orig_point=None, dest_point=None):
+    def get_graph(self, orig_point, dest_point):
         return self._graph
 
     def nearest_node(self, graph, lat, lon):
@@ -40,11 +40,13 @@ class FakeScenicDataProvider:
     """Fake IScenicDataProvider: fixed penalty, no real OSM data."""
     def __init__(self, fixed_penalty=1.0):
         self.fixed_penalty = fixed_penalty
-        self.loaded_place = None
+        self.loaded_orig_point = None
+        self.loaded_dest_point = None
         self.loaded_category_boosts = None
 
-    def load(self, place, category_boosts=None):
-        self.loaded_place = place
+    def load(self, orig_point, dest_point, category_boosts=None):
+        self.loaded_orig_point = orig_point
+        self.loaded_dest_point = dest_point
         self.loaded_category_boosts = category_boosts
 
     def get_scenic_penalty(self, lat, lon):
@@ -72,7 +74,7 @@ def test_execute_returns_plan_route_result(simple_graph):
     scenic_provider = FakeScenicDataProvider(fixed_penalty=1.0)
     use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
 
-    result = use_case.execute("Fake Place", (35.000, 135.000), (35.001, 135.001))
+    result = use_case.execute((35.000, 135.000), (35.001, 135.001))
 
     assert isinstance(result, PlanRouteResult)
     assert isinstance(result.baseline_route, Route)
@@ -85,15 +87,18 @@ def test_execute_returns_plan_route_result(simple_graph):
     assert len(result.scenic_coordinates) == len(result.scenic_route.node_ids)
 
 
-def test_execute_loads_scenic_data_for_the_given_place(simple_graph):
-    """Confirms the use case actually calls scenic_provider.load() with the right place."""
+def test_execute_loads_scenic_data_for_the_given_corridor(simple_graph):
+    """Confirms the use case calls scenic_provider.load() with route coordinates."""
     graph_repo = FakeGraphRepository(simple_graph)
     scenic_provider = FakeScenicDataProvider()
     use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
 
-    use_case.execute("Higashiyama Ward, Kyoto, Japan", (35.000, 135.000), (35.001, 135.001))
+    orig = (35.000, 135.000)
+    dest = (35.001, 135.001)
+    use_case.execute(orig, dest)
 
-    assert scenic_provider.loaded_place == "Higashiyama Ward, Kyoto, Japan"
+    assert scenic_provider.loaded_orig_point == orig
+    assert scenic_provider.loaded_dest_point == dest
 
 
 def test_execute_passes_category_boosts_to_scenic_provider(simple_graph):
@@ -102,7 +107,7 @@ def test_execute_passes_category_boosts_to_scenic_provider(simple_graph):
     use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
 
     boosts = {"nature": 1.5, "shrines_temples": 0.7}
-    use_case.execute("Higashiyama Ward, Kyoto, Japan", (35.000, 135.000), (35.001, 135.001), boosts)
+    use_case.execute((35.000, 135.000), (35.001, 135.001), boosts)
 
     assert scenic_provider.loaded_category_boosts == boosts
 
@@ -134,7 +139,7 @@ def test_execute_raises_when_origin_coordinates_are_far_from_graph(simple_graph)
     use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
 
     with pytest.raises(CoordinatesOutOfRangeException):
-        use_case.execute("Fake Place", (0.0, 0.0), (35.001, 135.001))
+        use_case.execute((0.0, 0.0), (35.001, 135.001))
 
 
 def test_execute_raises_when_destination_coordinates_are_far_from_graph(simple_graph):
@@ -144,4 +149,4 @@ def test_execute_raises_when_destination_coordinates_are_far_from_graph(simple_g
     use_case = PlanScenicRouteUseCase(graph_repo, scenic_provider)
 
     with pytest.raises(CoordinatesOutOfRangeException):
-        use_case.execute("Fake Place", (35.000, 135.000), (0.0, 0.0))
+        use_case.execute((35.000, 135.000), (0.0, 0.0))

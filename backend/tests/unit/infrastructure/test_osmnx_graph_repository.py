@@ -11,7 +11,7 @@ class FakeScenicDataProvider:
     def __init__(self, fixed_penalty=1.0):
         self.fixed_penalty = fixed_penalty
 
-    def load(self, place):
+    def load(self, orig_point, dest_point, category_boosts=None):
         pass
 
     def get_scenic_penalty(self, lat, lon):
@@ -105,19 +105,21 @@ def test_find_scenic_route_diverges_with_meaningful_scenic_incentive(simple_grap
     assert scenic.node_ids[0] == baseline.node_ids[0]
     assert scenic.node_ids[-1] == baseline.node_ids[-1]
     
-def test_get_graph_caches_result_for_same_place(simple_graph, monkeypatch):
-    """Confirms get_graph() doesn't re-fetch when called twice with the same place."""
+def test_get_graph_caches_result_for_same_corridor(simple_graph, monkeypatch):
+    """Confirms get_graph() doesn't re-fetch when called twice with the same corridor."""
     call_count = {"count": 0}
 
-    def fake_graph_from_place(place, network_type):
+    def fake_graph_from_bbox(bbox, network_type):
         call_count["count"] += 1
         return simple_graph
 
-    monkeypatch.setattr("yorimichi.infrastructure.osmnx_graph_repository.ox.graph_from_place", fake_graph_from_place)
+    monkeypatch.setattr("yorimichi.infrastructure.osmnx_graph_repository.ox.graph_from_bbox", fake_graph_from_bbox)
 
     repo = OSMnxGraphRepository()
-    graph1 = repo.get_graph("Fake Place")
-    graph2 = repo.get_graph("Fake Place")
+    orig = (35.000, 135.000)
+    dest = (35.001, 135.001)
+    graph1 = repo.get_graph(orig, dest)
+    graph2 = repo.get_graph(orig, dest)
 
     assert call_count["count"] == 1  # only fetched once, second call used cache
     assert graph1 is graph2

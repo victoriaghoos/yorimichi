@@ -47,7 +47,6 @@ def domain_exception_handler(request: Request, exc: DomainException):
 
 @app.get("/route", response_model=RouteResponse)
 def get_route(
-    place: str,
     orig_lat: float,
     orig_lon: float,
     dest_lat: float,
@@ -72,7 +71,7 @@ def get_route(
         category_boosts,
         default_boost_multiplier=DEFAULT_BOOST_MULTIPLIER,
     )
-    result = use_case.execute(place, (orig_lat, orig_lon), (dest_lat, dest_lon), category_boost_map)
+    result = use_case.execute((orig_lat, orig_lon), (dest_lat, dest_lon), category_boost_map)
 
     return RouteResponse(
         baseline=RouteDTO(

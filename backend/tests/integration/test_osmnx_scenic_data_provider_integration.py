@@ -15,11 +15,10 @@ import pytest
 from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
 from yorimichi.domain.scoring import BEST_CASE_SCENIC_PENALTY
 
-PLACE = "Higashiyama Ward, Kyoto, Japan"
-
 # Real, known coordinates from manual verification in this project:
 # Kiyomizu-dera (near many temples/shrines: should score close to maximum discount)
 NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON = 34.9949, 135.7850
+DEST_LAT, DEST_LON = 35.0038, 135.7788
 
 # A coordinate far outside Higashiyama entirely, to sanity-check the provider
 # doesn't silently return a nonsensical penalty for out-of-area points.
@@ -30,7 +29,7 @@ FAR_AWAY_LAT, FAR_AWAY_LON = 0.0, 0.0
 def test_load_fetches_real_scenic_points_for_higashiyama():
     """Confirms load() successfully fetches real OSM data without errors."""
     provider = OSMnxScenicDataProvider()
-    provider.load(PLACE)
+    provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
 
     assert provider._tree is not None
     assert provider._weights is not None
@@ -45,7 +44,7 @@ def test_get_scenic_penalty_near_kiyomizu_dera_reflects_high_scenic_density():
     meaningfully discounted scenic penalty, not a neutral 1.0.
     """
     provider = OSMnxScenicDataProvider()
-    provider.load(PLACE)
+    provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
 
     penalty = provider.get_scenic_penalty(NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON)
 
@@ -62,7 +61,7 @@ def test_get_scenic_penalty_stays_within_valid_bounds_for_distant_coordinates():
     always returns *a* nearest point, however far away.
     """
     provider = OSMnxScenicDataProvider()
-    provider.load(PLACE)
+    provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
 
     penalty = provider.get_scenic_penalty(FAR_AWAY_LAT, FAR_AWAY_LON)
 

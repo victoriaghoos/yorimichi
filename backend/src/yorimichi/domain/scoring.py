@@ -45,9 +45,12 @@ POI_TYPE_WEIGHTS = {
     "attraction": (0.5, "viewpoints"),
     "viewpoint": (0.6, "viewpoints"),
 
-    # waterside (new)
-    "water": (0.6, "waterside"),
-    "riverbank": (0.6, "waterside"),
+    # waterside
+    "water": (0.75, "waterside"),
+    "riverbank": (0.75, "waterside"),
+    "river": (0.85, "waterside"),
+    "canal": (0.7, "waterside"),
+    "stream": (0.65, "waterside"),
 
     # nature (new)
     "tree": (0.5, "nature"),

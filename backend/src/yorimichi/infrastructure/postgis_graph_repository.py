@@ -25,11 +25,10 @@ class PostGISGraphRepository(IGraphRepository):
 
     def get_graph(
         self,
-        place: str,
-        orig_point: tuple[float, float] | None = None,
-        dest_point: tuple[float, float] | None = None,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
     ):
-        cache_key = self._make_cache_key(place, orig_point, dest_point)
+        cache_key = self._make_cache_key(orig_point, dest_point)
         if cache_key in self._cached_graphs:
             return self._cached_graphs[cache_key]
 
@@ -37,49 +36,43 @@ class PostGISGraphRepository(IGraphRepository):
         try:
             graph = nx.MultiDiGraph(crs="EPSG:4326")
 
-            if orig_point is not None and dest_point is not None:
-                min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
-                nodes = (
-                    session.query(NodeModel)
-                    .filter(
-                        and_(
-                            NodeModel.lat >= min_lat,
-                            NodeModel.lat <= max_lat,
-                            NodeModel.lon >= min_lon,
-                            NodeModel.lon <= max_lon,
-                        )
+            min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
+            nodes = (
+                session.query(NodeModel)
+                .filter(
+                    and_(
+                        NodeModel.lat >= min_lat,
+                        NodeModel.lat <= max_lat,
+                        NodeModel.lon >= min_lon,
+                        NodeModel.lon <= max_lon,
                     )
-                    .all()
                 )
-            else:
-                nodes = session.query(NodeModel).all()
+                .all()
+            )
 
             for node in nodes:
                 graph.add_node(node.id, y=node.lat, x=node.lon)
 
-            if orig_point is not None and dest_point is not None:
-                from_node = aliased(NodeModel)
-                to_node = aliased(NodeModel)
-                edges = (
-                    session.query(EdgeModel)
-                    .join(from_node, from_node.id == EdgeModel.from_node_id)
-                    .join(to_node, to_node.id == EdgeModel.to_node_id)
-                    .filter(
-                        and_(
-                            from_node.lat >= min_lat,
-                            from_node.lat <= max_lat,
-                            from_node.lon >= min_lon,
-                            from_node.lon <= max_lon,
-                            to_node.lat >= min_lat,
-                            to_node.lat <= max_lat,
-                            to_node.lon >= min_lon,
-                            to_node.lon <= max_lon,
-                        )
+            from_node = aliased(NodeModel)
+            to_node = aliased(NodeModel)
+            edges = (
+                session.query(EdgeModel)
+                .join(from_node, from_node.id == EdgeModel.from_node_id)
+                .join(to_node, to_node.id == EdgeModel.to_node_id)
+                .filter(
+                    and_(
+                        from_node.lat >= min_lat,
+                        from_node.lat <= max_lat,
+                        from_node.lon >= min_lon,
+                        from_node.lon <= max_lon,
+                        to_node.lat >= min_lat,
+                        to_node.lat <= max_lat,
+                        to_node.lon >= min_lon,
+                        to_node.lon <= max_lon,
                     )
-                    .all()
                 )
-            else:
-                edges = session.query(EdgeModel).all()
+                .all()
+            )
 
             for edge in edges:
                 graph.add_edge(
@@ -96,14 +89,11 @@ class PostGISGraphRepository(IGraphRepository):
 
     def _make_cache_key(
         self,
-        place: str,
-        orig_point: tuple[float, float] | None,
-        dest_point: tuple[float, float] | None,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
     ) -> str:
-        if orig_point is None or dest_point is None:
-            return place
         min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
-        return f"{place}|{min_lat:.6f}|{min_lon:.6f}|{max_lat:.6f}|{max_lon:.6f}"
+        return f"{min_lat:.6f}|{min_lon:.6f}|{max_lat:.6f}|{max_lon:.6f}"
 
     def _compute_bbox(
         self,

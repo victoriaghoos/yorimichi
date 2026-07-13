@@ -19,7 +19,6 @@ L.Icon.Default.mergeOptions({
 })
 
 const HIGASHIYAMA_CENTER: [number, number] = [34.9949, 135.7850]
-const PLACE = 'Higashiyama Ward, Kyoto, Japan'
 const MOBILE_BREAKPOINT = 768
 
 const ROUTE_STYLES: Record<'baseline' | 'scenic', PathOptions> = {
@@ -134,7 +133,6 @@ function RouteMap() {
       setError(null)
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
       const params: Record<string, string> = {
-        place: PLACE,
         orig_lat: String(origin!.lat),
         orig_lon: String(origin!.lon),
         dest_lat: String(destination!.lat),

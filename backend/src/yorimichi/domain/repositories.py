@@ -9,24 +9,19 @@ from yorimichi.domain.entities import Node, Route
 
 
 class IGraphRepository(ABC):
-    """Provides access to the street network for a given place."""
+    """Provides access to the street network for a route corridor."""
 
     @abstractmethod
     def get_graph(
         self,
-        place: str,
-        orig_point: tuple[float, float] | None = None,
-        dest_point: tuple[float, float] | None = None,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
     ):
         """
-        Returns an opaque graph handle for the given place. The Domain never
-        inspects this object directly — it's passed back into this same
-        repository's other methods (e.g. nearest_node) to resolve real data.
-
-        orig_point/dest_point may be provided by the application layer to allow
-        infrastructure implementations to fetch a route-local subgraph (for
-        example via a PostGIS bounding box query) instead of loading an entire
-        regional graph into memory.
+        Returns an opaque graph handle for the route corridor implied by origin
+        and destination coordinates. The Domain never inspects this object
+        directly — it's passed back into this same repository's other methods
+        (e.g. nearest_node) to resolve real data.
         """
         raise NotImplementedError
 
@@ -48,9 +43,15 @@ class IGraphRepository(ABC):
 
 class IScenicDataProvider(ABC):
     @abstractmethod
-    def load(self, place: str, category_boosts: dict[str, float] | None = None):
+    def load(
+        self,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
+        category_boosts: dict[str, float] | None = None,
+    ):
         """
-        Loads/prepares scenic data for the given place.
+        Loads/prepares scenic data for the route corridor implied by origin and
+        destination coordinates.
 
         category_boosts applies a multiplier per category (e.g. {"nature": 1.5}),
         where 1.0 keeps the normal strength, >1.0 boosts and <1.0 weakens.
