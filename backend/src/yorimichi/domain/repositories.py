@@ -12,11 +12,21 @@ class IGraphRepository(ABC):
     """Provides access to the street network for a given place."""
 
     @abstractmethod
-    def get_graph(self, place: str):
+    def get_graph(
+        self,
+        place: str,
+        orig_point: tuple[float, float] | None = None,
+        dest_point: tuple[float, float] | None = None,
+    ):
         """
         Returns an opaque graph handle for the given place. The Domain never
         inspects this object directly — it's passed back into this same
         repository's other methods (e.g. nearest_node) to resolve real data.
+
+        orig_point/dest_point may be provided by the application layer to allow
+        infrastructure implementations to fetch a route-local subgraph (for
+        example via a PostGIS bounding box query) instead of loading an entire
+        regional graph into memory.
         """
         raise NotImplementedError
 

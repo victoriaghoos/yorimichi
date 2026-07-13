@@ -32,7 +32,7 @@ class PlanScenicRouteUseCase:
         dest_point: tuple[float, float],
         category_boosts: dict[str, float] | None = None,
     ) -> PlanRouteResult:
-        graph = self._graph_repo.get_graph(place)
+        graph = self._graph_repo.get_graph(place, orig_point=orig_point, dest_point=dest_point)
         self._scenic_provider.load(place, category_boosts)
 
         orig_node = self._graph_repo.nearest_node(graph, orig_point[0], orig_point[1])

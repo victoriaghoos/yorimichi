@@ -57,18 +57,19 @@ app = fastapi_app.app
 
 
 def run_cli_demo():
-    print(f"Fetching graph for: {PLACE}")
-    graph = _graph_repo.get_graph(PLACE)
-    print(f"Nodes: {len(graph.nodes)}, Edges: {len(graph.edges)}")
-
     print("\nComparing baseline vs scenic routes across multiple point pairs:")
     results = {}
+    graphs_by_label = {}
     for label, orig_point, dest_point in TEST_PAIRS:
+        graph = _graph_repo.get_graph(PLACE, orig_point=orig_point, dest_point=dest_point)
+        print(f"{label}: subgraph nodes={len(graph.nodes)}, edges={len(graph.edges)}")
         result = _use_case.execute(PLACE, orig_point, dest_point)
         print_route_comparison(label, result)
         results[label] = result
+        graphs_by_label[label] = graph
 
     for label, result in results.items():
+        graph = graphs_by_label[label]
         plot_route_comparison(graph, result, label)
 
     plt.show()

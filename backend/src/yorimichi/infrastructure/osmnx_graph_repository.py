@@ -20,7 +20,12 @@ class OSMnxGraphRepository(IGraphRepository):
     def __init__(self):
         self._cached_graphs = {}
 
-    def get_graph(self, place: str):
+    def get_graph(
+        self,
+        place: str,
+        orig_point: tuple[float, float] | None = None,
+        dest_point: tuple[float, float] | None = None,
+    ):
         if place not in self._cached_graphs:
             self._cached_graphs[place] = ox.graph_from_place(place, network_type="walk")
         return self._cached_graphs[place]

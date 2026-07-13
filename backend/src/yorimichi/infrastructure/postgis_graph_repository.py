@@ -2,11 +2,12 @@
 Infrastructure adapter: PostGIS-backed IGraphRepository implementation.
 """
 
+import math
 import networkx as nx
 from shapely.geometry import Point
 from geoalchemy2.shape import from_shape
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, and_
+from sqlalchemy.orm import sessionmaker, aliased
 
 from yorimichi.domain.entities import Node, Route
 from yorimichi.domain.repositories import IGraphRepository
@@ -15,24 +16,71 @@ from yorimichi.infrastructure.postgis_models import NodeModel, EdgeModel
 
 
 class PostGISGraphRepository(IGraphRepository):
+    _SUBGRAPH_MARGIN_METERS = 1500.0
+
     def __init__(self, database_url: str):
         self._engine = create_engine(database_url)
         self._Session = sessionmaker(bind=self._engine)
         self._cached_graphs = {}
 
-    def get_graph(self, place: str):
-        if place in self._cached_graphs:
-            return self._cached_graphs[place]
+    def get_graph(
+        self,
+        place: str,
+        orig_point: tuple[float, float] | None = None,
+        dest_point: tuple[float, float] | None = None,
+    ):
+        cache_key = self._make_cache_key(place, orig_point, dest_point)
+        if cache_key in self._cached_graphs:
+            return self._cached_graphs[cache_key]
 
         session = self._Session()
         try:
             graph = nx.MultiDiGraph(crs="EPSG:4326")
 
-            nodes = session.query(NodeModel).all()
+            if orig_point is not None and dest_point is not None:
+                min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
+                nodes = (
+                    session.query(NodeModel)
+                    .filter(
+                        and_(
+                            NodeModel.lat >= min_lat,
+                            NodeModel.lat <= max_lat,
+                            NodeModel.lon >= min_lon,
+                            NodeModel.lon <= max_lon,
+                        )
+                    )
+                    .all()
+                )
+            else:
+                nodes = session.query(NodeModel).all()
+
             for node in nodes:
                 graph.add_node(node.id, y=node.lat, x=node.lon)
 
-            edges = session.query(EdgeModel).all()
+            if orig_point is not None and dest_point is not None:
+                from_node = aliased(NodeModel)
+                to_node = aliased(NodeModel)
+                edges = (
+                    session.query(EdgeModel)
+                    .join(from_node, from_node.id == EdgeModel.from_node_id)
+                    .join(to_node, to_node.id == EdgeModel.to_node_id)
+                    .filter(
+                        and_(
+                            from_node.lat >= min_lat,
+                            from_node.lat <= max_lat,
+                            from_node.lon >= min_lon,
+                            from_node.lon <= max_lon,
+                            to_node.lat >= min_lat,
+                            to_node.lat <= max_lat,
+                            to_node.lon >= min_lon,
+                            to_node.lon <= max_lon,
+                        )
+                    )
+                    .all()
+                )
+            else:
+                edges = session.query(EdgeModel).all()
+
             for edge in edges:
                 graph.add_edge(
                     edge.from_node_id,
@@ -41,10 +89,40 @@ class PostGISGraphRepository(IGraphRepository):
                     highway=edge.highway_tag,
                 )
 
-            self._cached_graphs[place] = graph
+            self._cached_graphs[cache_key] = graph
             return graph
         finally:
             session.close()
+
+    def _make_cache_key(
+        self,
+        place: str,
+        orig_point: tuple[float, float] | None,
+        dest_point: tuple[float, float] | None,
+    ) -> str:
+        if orig_point is None or dest_point is None:
+            return place
+        min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
+        return f"{place}|{min_lat:.6f}|{min_lon:.6f}|{max_lat:.6f}|{max_lon:.6f}"
+
+    def _compute_bbox(
+        self,
+        orig_point: tuple[float, float],
+        dest_point: tuple[float, float],
+    ) -> tuple[float, float, float, float]:
+        orig_lat, orig_lon = orig_point
+        dest_lat, dest_lon = dest_point
+
+        center_lat = (orig_lat + dest_lat) / 2.0
+        lat_margin = self._SUBGRAPH_MARGIN_METERS / 111_320.0
+        lon_denominator = max(111_320.0 * abs(math.cos(math.radians(center_lat))), 1.0)
+        lon_margin = self._SUBGRAPH_MARGIN_METERS / lon_denominator
+
+        min_lat = min(orig_lat, dest_lat) - lat_margin
+        max_lat = max(orig_lat, dest_lat) + lat_margin
+        min_lon = min(orig_lon, dest_lon) - lon_margin
+        max_lon = max(orig_lon, dest_lon) + lon_margin
+        return min_lat, min_lon, max_lat, max_lon
 
     def nearest_node(self, graph, lat: float, lon: float) -> Node:
         """

@@ -17,7 +17,7 @@ class FakeGraphRepository:
         self._graph = graph
         self._real_repo = OSMnxGraphRepository()
 
-    def get_graph(self, place):
+    def get_graph(self, place, orig_point=None, dest_point=None):
         return self._graph
 
     def nearest_node(self, graph, lat, lon):

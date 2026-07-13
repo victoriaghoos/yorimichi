@@ -14,13 +14,36 @@ def print_route_comparison(label, result):
     )
 
 
+def _normalize_route_node_ids(graph, node_ids):
+    """
+    Normalize route node IDs against graph node key types.
+
+    OSMnx graphs typically use int node keys, while PostGIS-backed graphs in
+    this project use string keys. Route entities store node IDs as strings.
+    """
+    normalized = []
+    for node_id in node_ids:
+        if node_id in graph.nodes:
+            normalized.append(node_id)
+            continue
+
+        try:
+            int_id = int(node_id)
+        except (ValueError, TypeError):
+            normalized.append(node_id)
+            continue
+
+        normalized.append(int_id if int_id in graph.nodes else node_id)
+    return normalized
+
+
 def plot_route_comparison(graph, result, label):
     """
     Plot baseline vs scenic route for a single pair, zoomed to the relevant area
     with a legend, so the divergence is clearly visible without extra context.
     """
-    baseline_ids = [int(n) for n in result.baseline_route.node_ids]
-    scenic_ids = [int(n) for n in result.scenic_route.node_ids]
+    baseline_ids = _normalize_route_node_ids(graph, result.baseline_route.node_ids)
+    scenic_ids = _normalize_route_node_ids(graph, result.scenic_route.node_ids)
 
     fig, ax = ox.plot_graph_routes(
         graph,
