@@ -14,7 +14,7 @@ from yorimichi.domain.category_boosts import parse_category_boosts
 from yorimichi.domain.exceptions import DomainException
 from yorimichi.infrastructure.api_models import RouteDTO, RouteResponse
 
-app = FastAPI(title="Yorimichi API", description="Scenic route planning for Higashiyama, Kyoto")
+app = FastAPI(title="Yorimichi API", description="Scenic route planning for Kansai and Kanto, Japan")
 
 app.add_middleware(
     CORSMiddleware,
