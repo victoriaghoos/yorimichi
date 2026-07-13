@@ -1,11 +1,11 @@
 # 🌸 Yorimichi (寄り道) 
 > **"The art of the scenic detour."** | **「寄り道の美学をデジタル化する。」**
 
-**Yorimichi** is a high-performance routing engine designed to prioritize **experience over efficiency**. While traditional GPS focuses on the shortest path from A to B, Yorimichi calculates the most enriching journey through the historic Higashiyama district of Kyoto.
+**Yorimichi** is a high-performance routing engine designed to prioritize **experience over efficiency**. While traditional GPS focuses on the shortest path from A to B, Yorimichi calculates the most enriching journey, now spanning the Kansai and Kanto regions of Japan (~20M nodes, 44M edges), having started as a single-district proof of concept in Higashiyama, Kyoto.
 
 [![Python Version](https://img.shields.io/badge/python-3.12%2B-blue?style=flat-square)](https://www.python.org/)
 [![Architecture](https://img.shields.io/badge/architecture-Hexagonal-orange?style=flat-square)](https://en.wikipedia.org/wiki/Hexagonal_architecture_(software))
-[![Focus Area](https://img.shields.io/badge/focus-Kyoto_Higashiyama-red?style=flat-square)](#)
+[![Focus Area](https://img.shields.io/badge/coverage-Kansai_%2B_Kanto-red?style=flat-square)](#)
 [![Status](https://img.shields.io/badge/status-in_development-yellow?style=flat-square)](#-roadmap--status)
 
 ---
@@ -16,7 +16,7 @@ In Japanese culture, **Yorimichi** means to stop by somewhere on one's way home 
 
 日本における「寄り道」の文化をデジタル化します。最短距離ではなく、あえて遠回りをしてでも通りたい「情緒ある道」を提案します。
 
-- **Focus Area:** Higashiyama, Kyoto (Temples, Shrines, Parks, and Traditional Alleys).
+- **Coverage:** Kansai and Kanto regions (Kyoto, Osaka, Kobe, Nara, Tokyo, Yokohama, and surroundings), originally proven on Higashiyama, Kyoto (Temples, Shrines, Parks, and Traditional Alleys).
 - **Core Value:** Discovery over speed. (スピードよりも、発見を。)
 
 ---
@@ -27,7 +27,7 @@ This is a monorepo containing both the routing engine and its client application
 
 yorimichi/
 
-├── backend/     ← Python/FastAPI routing engine (Phases 1-6, detailed below)
+├── backend/     ← Python/FastAPI routing engine (Phases 1-7, detailed below)
 
 └── frontend/    ← React/Vite web & mobile client (in progress)
 
@@ -94,22 +94,6 @@ A `wikipedia`/`wikidata`-link fallback also catches some category gaps regardles
 
 ---
 
-## 🔭 Future Vision
-Currently scoped to Higashiyama, Kyoto as a proof of concept. The architecture 
-is designed to eventually scale to all of Kyoto, then Japan more broadly, and 
-potentially other regions (e.g. Belgium), requiring PostGIS-backed persistence 
-(Phase 5) and region-configurable scenic scoring profiles rather than hardcoded 
-Japan-specific logic (e.g. religion=buddhist/shinto, or category weights tuned 
-for one cultural context: see *Known Limitation* above for a concrete example 
-of this surfacing already during Higashiyama-only development).
-
-Longer-term, the goal is a Google Maps-like experience at a much smaller, more 
-curated and customizable scale: prioritizing discovery and aesthetics over 
-comprehensive global coverage, with a distinctly personal, illustrated map style 
-rather than a generic default look.
-
----
-
 ## 🏗️ Architecture / アーキテクチャ
 
 This project follows a **Hexagonal Architecture (Ports & Adapters)** to ensure the business logic remains fully decoupled from external technologies like OSMnx, NetworkX, PostGIS, or FastAPI.
@@ -173,10 +157,10 @@ Built incrementally, proving the core idea before adding infrastructure complexi
     - [x] Filterable/boostable scenic categories (⛩️ shrines & temples, 🌸 parks, 🌊 waterside, 🏯 historic sites, 🌳 nature, 🌉 viewpoints), passed as parameters to `/route`. Implemented as a **multiplicative boost model**, not binary filtering: an inactive category remains at neutral strength (still contributes) rather than being silenced entirely. This was a deliberate correction after discovering that pure on/off filtering had no measurable effect on route selection in Higashiyama, where `shrines_temples` is overwhelmingly dominant, muting other categories wasn't enough to shift A*'s choice, since the strongest signal remained untouched. Boost strength is configurable per request (`boost_categories` for a default 1.5× multiplier, or explicit `category:multiplier` pairs via `category_boosts`), validated end-to-end with real, dramatic route divergence. Category weighting was further refined using an empirical tag-frequency analysis of the full Kansai region `.osm.pbf` extract (8M+ tagged elements): added `natural=tree` (51k+ occurrences, previously missing entirely), `landuse=forest`, `natural=tree_row`, and two thematic signals specific to this project — `genus=Cerasus` (cherry blossom trees) and `ceremonial_gate=torii`, both scored at maximum weight.
     - [x] Accessible route visualization: color-blind-safe blue/orange palette (replacing an initial red/green scheme) plus a redundant visual signal (dashed baseline vs. solid scenic line), so routes remain distinguishable independent of color perception.
     - [x] Migrated to TypeScript for stronger data-contract guarantees between frontend and backend (shared `RouteResponse`/`RouteDTO`/`Coordinate` types mirroring the backend's Pydantic models), plus a responsive, collapsible control panel that adapts its default state to viewport width, addressing the practical constraint that a permanently-expanded desktop-style panel would obscure most of the map on a phone screen during actual on-foot use.
-    - [ ] Walking vs. cycling mode (requires a backend extension: `network_type` parameter on graph fetching, currently hardcoded to `"walk"`)
     - [ ] PWA installability and offline tolerance for mobile use
     - [ ] Live route tracking via the Geolocation API while walking
     - [ ] Street-level imagery integration (Mapillary, free/open: Google Street View considered but requires a paid API)
+- [x] **Phase 7: Regional Scale-Up:** Kansai + Kanto regions imported (20.5M nodes, 44.4M edges), place-based scoping replaced with coordinate/bbox-based scoping across the entire stack, full-graph in-memory loading bottleneck identified and fixed via corridor-scoped subgraph queries.
 
 ---
 
