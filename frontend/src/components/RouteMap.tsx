@@ -9,8 +9,7 @@ import MapFlyTo from './MapFlyTo'
 import './RouteMap.css'
 import type { Coordinate, RouteResponse, ScenicCategory, StatusMessage } from '../types'
 
-// @ts-expect-error — Leaflet's default icon setup requires deleting this internal property,
-// which isn't part of Leaflet's public TypeScript definitions.
+// @ts-expect-error: Leaflet's default icon setup requires deleting this internal property which isn't part of Leaflet's public TypeScript definitions.
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
