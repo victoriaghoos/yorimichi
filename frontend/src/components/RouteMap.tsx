@@ -80,18 +80,13 @@ function RouteMap() {
   }, [])
 
   const handleMapClick = useCallback((lat: number, lon: number) => {
-    if (!origin) {
+    if (!origin || destination) {
       setOrigin({ lat, lon })
       setDestination(null)
       setRouteData(null)
       setError(null)
-    } else if (!destination) {
-      setDestination({ lat, lon })
     } else {
-      setOrigin({ lat, lon })
-      setDestination(null)
-      setRouteData(null)
-      setError(null)
+      setDestination({ lat, lon })
     }
   }, [origin, destination])
 
