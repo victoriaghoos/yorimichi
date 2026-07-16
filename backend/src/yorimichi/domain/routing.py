@@ -34,8 +34,8 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 def calculate_edge_cost(edge: Edge, scenic_provider) -> float:
     """
     Pure domain calculation of an edge's scenic- and road-weighted cost.
-    scenic_provider is an IScenicDataProvider: Domain asks for a penalty
-    value, never touches the underlying KD-tree/weights implementation.
+    scenic_provider is an immutable scenic index object: Domain asks for a
+    penalty value, never touches the underlying KD-tree/weights implementation.
     """
     mid_lat = (edge.from_node.lat + edge.to_node.lat) / 2
     mid_lon = (edge.from_node.lon + edge.to_node.lon) / 2

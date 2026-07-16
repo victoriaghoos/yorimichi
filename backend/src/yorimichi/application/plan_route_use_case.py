@@ -32,7 +32,7 @@ class PlanScenicRouteUseCase:
         category_boosts: dict[str, float] | None = None,
     ) -> PlanRouteResult:
         graph = self._graph_repo.get_graph(orig_point, dest_point)
-        self._scenic_provider.load(orig_point, dest_point, category_boosts)
+        scenic_index = self._scenic_provider.load(orig_point, dest_point, category_boosts)
 
         orig_node = self._graph_repo.nearest_node(graph, orig_point[0], orig_point[1])
         dest_node = self._graph_repo.nearest_node(graph, dest_point[0], dest_point[1])
@@ -41,7 +41,7 @@ class PlanScenicRouteUseCase:
         self._validate_within_range("Destination", dest_point, dest_node)
 
         baseline_route = self._graph_repo.find_shortest_route(graph, orig_node, dest_node)
-        scenic_route = self._graph_repo.find_scenic_route(graph, orig_node, dest_node, self._scenic_provider)
+        scenic_route = self._graph_repo.find_scenic_route(graph, orig_node, dest_node, scenic_index)
         baseline_coordinates = self._node_ids_to_coordinates(graph, baseline_route.node_ids)
         scenic_coordinates = self._node_ids_to_coordinates(graph, scenic_route.node_ids)
 

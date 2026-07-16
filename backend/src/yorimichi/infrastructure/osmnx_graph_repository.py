@@ -67,9 +67,9 @@ class OSMnxGraphRepository(IGraphRepository):
         length = nx.shortest_path_length(graph, orig_id, dest_id, weight="length")
         return Route(node_ids=tuple(str(n) for n in path), length=length)
 
-    def find_scenic_route(self, graph, orig: Node, dest: Node, scenic_provider) -> Route:
+    def find_scenic_route(self, graph, orig: Node, dest: Node, scenic_index) -> Route:
         orig_id, dest_id = int(orig.id), int(dest.id)
-        weight_fn = make_edge_weight_fn(graph, scenic_provider)
+        weight_fn = make_edge_weight_fn(graph, scenic_index)
         heuristic_fn = make_heuristic_fn(graph)
         path = nx.astar_path(graph, orig_id, dest_id, heuristic=heuristic_fn, weight=weight_fn)
         length = sum(

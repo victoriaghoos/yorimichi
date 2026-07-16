@@ -29,11 +29,10 @@ FAR_AWAY_LAT, FAR_AWAY_LON = 0.0, 0.0
 def test_load_fetches_real_scenic_points_for_higashiyama():
     """Confirms load() successfully fetches real OSM data without errors."""
     provider = OSMnxScenicDataProvider()
-    provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
+    scenic_index = provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
 
-    assert provider._tree is not None
-    assert provider._weights is not None
-    assert len(provider._weights) > 0
+    penalty = scenic_index.get_scenic_penalty(NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON)
+    assert BEST_CASE_SCENIC_PENALTY <= penalty <= 1.0
 
 
 @pytest.mark.integration
@@ -44,9 +43,9 @@ def test_get_scenic_penalty_near_kiyomizu_dera_reflects_high_scenic_density():
     meaningfully discounted scenic penalty, not a neutral 1.0.
     """
     provider = OSMnxScenicDataProvider()
-    provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
+    scenic_index = provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
 
-    penalty = provider.get_scenic_penalty(NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON)
+    penalty = scenic_index.get_scenic_penalty(NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON)
 
     assert BEST_CASE_SCENIC_PENALTY <= penalty <= 1.0
     assert penalty < 1.0, "Expected some scenic discount near Kiyomizu-dera, got a fully neutral penalty"
@@ -61,9 +60,9 @@ def test_get_scenic_penalty_stays_within_valid_bounds_for_distant_coordinates():
     always returns *a* nearest point, however far away.
     """
     provider = OSMnxScenicDataProvider()
-    provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
+    scenic_index = provider.load((NEAR_TEMPLE_LAT, NEAR_TEMPLE_LON), (DEST_LAT, DEST_LON))
 
-    penalty = provider.get_scenic_penalty(FAR_AWAY_LAT, FAR_AWAY_LON)
+    penalty = scenic_index.get_scenic_penalty(FAR_AWAY_LAT, FAR_AWAY_LON)
 
     assert BEST_CASE_SCENIC_PENALTY <= penalty <= 1.0
     assert penalty == 1.0, "A coordinate this far from any scenic point should receive no discount at all"

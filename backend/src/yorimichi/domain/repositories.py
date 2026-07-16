@@ -36,8 +36,14 @@ class IGraphRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_scenic_route(self, graph, orig: Node, dest: Node, scenic_provider) -> Route:
+    def find_scenic_route(self, graph, orig: Node, dest: Node, scenic_index) -> Route:
         """Returns the scenic (S-A*) route between two nodes."""
+        raise NotImplementedError
+
+
+class IScenicIndex(ABC):
+    @abstractmethod
+    def get_scenic_penalty(self, lat: float, lon: float) -> float:
         raise NotImplementedError
 
 
@@ -48,17 +54,13 @@ class IScenicDataProvider(ABC):
         orig_point: tuple[float, float],
         dest_point: tuple[float, float],
         category_boosts: dict[str, float] | None = None,
-    ):
+    ) -> IScenicIndex:
         """
         Loads/prepares scenic data for the route corridor implied by origin and
-        destination coordinates.
+        destination coordinates and returns an immutable scenic index object.
 
         category_boosts applies a multiplier per category (e.g. {"nature": 1.5}),
         where 1.0 keeps the normal strength, >1.0 boosts and <1.0 weakens.
         Categories not listed are treated as 1.0 (neutral, still counted).
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_scenic_penalty(self, lat: float, lon: float) -> float:
         raise NotImplementedError

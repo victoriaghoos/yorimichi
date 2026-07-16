@@ -32,12 +32,20 @@ class FakeGraphRepository:
     def find_shortest_route(self, graph, orig, dest):
         return self._real_repo.find_shortest_route(graph, orig, dest)
 
-    def find_scenic_route(self, graph, orig, dest, scenic_provider):
-        return self._real_repo.find_scenic_route(graph, orig, dest, scenic_provider)
+    def find_scenic_route(self, graph, orig, dest, scenic_index):
+        return self._real_repo.find_scenic_route(graph, orig, dest, scenic_index)
+
+
+class FakeScenicIndex:
+    def __init__(self, fixed_penalty):
+        self.fixed_penalty = fixed_penalty
+
+    def get_scenic_penalty(self, lat, lon):
+        return self.fixed_penalty
 
 
 class FakeScenicDataProvider:
-    """Fake IScenicDataProvider: fixed penalty, no real OSM data."""
+    """Fake IScenicDataProvider returning an immutable scenic index object."""
     def __init__(self, fixed_penalty=1.0):
         self.fixed_penalty = fixed_penalty
         self.loaded_orig_point = None
@@ -48,9 +56,7 @@ class FakeScenicDataProvider:
         self.loaded_orig_point = orig_point
         self.loaded_dest_point = dest_point
         self.loaded_category_boosts = category_boosts
-
-    def get_scenic_penalty(self, lat, lon):
-        return self.fixed_penalty
+        return FakeScenicIndex(self.fixed_penalty)
 
 
 @pytest.fixture

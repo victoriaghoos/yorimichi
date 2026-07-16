@@ -9,29 +9,39 @@ re-index scenic data.
 """
 
 import math
+import threading
+from dataclasses import dataclass
 import pandas as pd
 import osmnx as ox
 import numpy as np
 from scipy.spatial import cKDTree
 
-from yorimichi.domain.repositories import IScenicDataProvider
+from yorimichi.domain.repositories import IScenicDataProvider, IScenicIndex
 from yorimichi.domain.scoring import get_poi_weight, compute_scenic_penalty
+
+
+@dataclass(frozen=True)
+class ScenicIndex(IScenicIndex):
+    _tree: cKDTree
+    _weights: np.ndarray
+
+    def get_scenic_penalty(self, lat: float, lon: float) -> float:
+        return compute_scenic_penalty(lat, lon, self._tree, self._weights)
 
 
 class OSMnxScenicDataProvider(IScenicDataProvider):
     _SCENIC_MARGIN_METERS = 1500.0
 
     def __init__(self):
-        self._tree = None
-        self._weights = None
-        self._loaded_key = None
+        self._cache: dict[tuple[str, tuple[tuple[str, float], ...] | None], ScenicIndex] = {}
+        self._cache_lock = threading.Lock()
 
     def load(
         self,
         orig_point: tuple[float, float],
         dest_point: tuple[float, float],
         category_boosts: dict[str, float] | None = None,
-    ):
+    ) -> IScenicIndex:
         min_lat, min_lon, max_lat, max_lon = self._compute_bbox(orig_point, dest_point)
         bbox = (min_lon, min_lat, max_lon, max_lat)
         cache_key = (
@@ -39,8 +49,10 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
             tuple(sorted(category_boosts.items())) if category_boosts else None,
         )
 
-        if cache_key == self._loaded_key:
-            return
+        with self._cache_lock:
+            cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         tags = {
             "historic": True,
@@ -58,22 +70,25 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         scenic_gdf = ox.features_from_bbox(bbox, tags=tags)
 
         if scenic_gdf.empty:
-            self._tree = cKDTree(np.array([[0.0, 0.0]]))
-            self._weights = np.array([0.0])
-            self._loaded_key = cache_key
-            return
+            index = ScenicIndex(cKDTree(np.array([[0.0, 0.0]])), np.array([0.0]))
+            with self._cache_lock:
+                self._cache.setdefault(cache_key, index)
+                index = self._cache[cache_key]
+            return index
 
         projected = ox.projection.project_gdf(scenic_gdf)
         centroids_projected = projected.geometry.centroid
         centroids = centroids_projected.to_crs(scenic_gdf.crs)
         coords = np.array([[pt.y, pt.x] for pt in centroids])
 
-        self._weights = np.array([
+        weights = np.array([
             get_poi_weight({k: v for k, v in row.items() if pd.notna(v)}, category_boosts)
             for _, row in scenic_gdf.iterrows()
         ])
-        self._tree = cKDTree(coords)
-        self._loaded_key = cache_key
+        index = ScenicIndex(cKDTree(coords), weights)
+        with self._cache_lock:
+            self._cache.setdefault(cache_key, index)
+            return self._cache[cache_key]
 
     def _compute_bbox(
         self,
@@ -93,9 +108,3 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         min_lon = min(orig_lon, dest_lon) - lon_margin
         max_lon = max(orig_lon, dest_lon) + lon_margin
         return min_lat, min_lon, max_lat, max_lon
-
-    def get_scenic_penalty(self, lat: float, lon: float) -> float:
-        if self._tree is None:
-            raise RuntimeError("load() must be called before get_scenic_penalty().")
-        penalty = compute_scenic_penalty(lat, lon, self._tree, self._weights)
-        return penalty

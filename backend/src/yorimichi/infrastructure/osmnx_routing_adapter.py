@@ -12,7 +12,7 @@ def _node_from_graph(graph, node_id) -> Node:
     return Node(id=str(node_id), lat=data["y"], lon=data["x"])
 
 
-def make_edge_weight_fn(graph, scenic_provider):
+def make_edge_weight_fn(graph, scenic_index):
     def _edge_attr_dicts(edge_dict):
         # For MultiDiGraph, networkx passes {edge_key: attrs}. For plain graphs,
         # it may pass attrs directly.
@@ -32,7 +32,7 @@ def make_edge_weight_fn(graph, scenic_provider):
                     length=data.get("length", 1.0),
                     highway_tag=data.get("highway"),
                 ),
-                scenic_provider,
+                scenic_index,
             )
             for data in _edge_attr_dicts(edge_dict)
         )
