@@ -95,6 +95,23 @@ def test_tree_is_weighted_as_nature_and_respects_boosts():
     assert get_poi_weight({"natural": "tree"}, {"nature": 1.5}) == pytest.approx(0.75)
 
 
+def test_nan_in_earlier_columns_does_not_block_later_tag_match():
+    row = {
+        "historic": float("nan"),
+        "amenity": float("nan"),
+        "leisure": float("nan"),
+        "tourism": float("nan"),
+        "building": float("nan"),
+        "natural": "tree",
+    }
+    assert get_poi_weight(row) == 0.5
+
+
+def test_nan_wikipedia_and_wikidata_do_not_trigger_historic_fallback():
+    row = {"wikipedia": float("nan"), "wikidata": float("nan")}
+    assert get_poi_weight(row) == DEFAULT_POI_WEIGHT
+
+
 def test_tree_row_is_weighted_as_nature_and_respects_boosts():
     assert get_poi_weight({"natural": "tree_row"}) == pytest.approx(0.55)
     assert get_poi_weight({"natural": "tree_row"}, {"nature": 1.5}) == pytest.approx(0.825)

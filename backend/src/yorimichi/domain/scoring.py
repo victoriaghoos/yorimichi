@@ -4,6 +4,8 @@ infrastructure dependencies (no direct osmnx/networkx calls): this module
 only computes numeric weights/penalties from the data it's given.
 """
 
+import math
+
 # The scenic penalty ranges from 1.0 (no discount, far from anything scenic)
 # down to (1.0 - MAX_SCENIC_DISCOUNT) at the closest possible proximity.
 # Kept as a single named constant so the "best case" value used by the
@@ -113,6 +115,18 @@ def _category_multiplier(category: str, category_boosts: dict[str, float] | None
     return category_boosts.get(category, 1.0)
 
 
+def _tag_value(row, key):
+    value = row.get(key)
+    if value is None:
+        return None
+    try:
+        if math.isnan(value):
+            return None
+    except TypeError:
+        pass
+    return value
+
+
 def get_poi_weight(row, category_boosts: dict[str, float] | None = None) -> float:
     """
     Look up the scenic weight for a POI row. Prefers a small, curated set of
@@ -125,15 +139,15 @@ def get_poi_weight(row, category_boosts: dict[str, float] | None = None) -> floa
     Example: {"nature": 1.5, "shrines_temples": 0.7}
     """
     # Highly specific thematic signal: cherry blossom trees.
-    if row.get("genus") == "Cerasus":
+    if _tag_value(row, "genus") == "Cerasus":
         return 1.0 * _category_multiplier("nature", category_boosts)
 
     # Torii/gate tags deserve a strong shrine-temple pull.
-    if row.get("ceremonial_gate") == "torii" or row.get("man_made") == "ceremonial_gate":
+    if _tag_value(row, "ceremonial_gate") == "torii" or _tag_value(row, "man_made") == "ceremonial_gate":
         return 1.0 * _category_multiplier("shrines_temples", category_boosts)
 
     for tag_col in ("historic", "amenity", "leisure", "tourism", "building", "natural", "waterway", "landuse"):
-        value = row.get(tag_col)
+        value = _tag_value(row, tag_col)
         if value is None:
             continue
 
@@ -145,10 +159,10 @@ def get_poi_weight(row, category_boosts: dict[str, float] | None = None) -> floa
             fallback_category = LIKELY_SCENIC_FALLBACK_CATEGORIES.get(tag_col)
             return LIKELY_SCENIC_FALLBACK_WEIGHT * _category_multiplier(fallback_category, category_boosts)
 
-    if row.get("religion") in ("buddhist", "shinto"):
+    if _tag_value(row, "religion") in ("buddhist", "shinto"):
         return 1.0 * _category_multiplier("shrines_temples", category_boosts)
 
-    if row.get("wikipedia") is not None or row.get("wikidata") is not None:
+    if _tag_value(row, "wikipedia") is not None or _tag_value(row, "wikidata") is not None:
         return 0.9 * _category_multiplier("historic_sites", category_boosts)
 
     return DEFAULT_POI_WEIGHT
