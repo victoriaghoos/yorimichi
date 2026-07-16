@@ -146,7 +146,14 @@ class PostGISGraphRepository(IGraphRepository):
         heuristic_fn = make_heuristic_fn(graph)
         path = nx.astar_path(graph, orig_id, dest_id, heuristic=heuristic_fn, weight=weight_fn)
         length = sum(
-            graph.edges[path[i], path[i + 1], 0].get("length", 0)
+            min(
+                (
+                    edge_data.get("length", 0)
+                    for edge_data in graph.get_edge_data(path[i], path[i + 1], default={}).values()
+                    if isinstance(edge_data, dict)
+                ),
+                default=0,
+            )
             for i in range(len(path) - 1)
         )
         return Route(node_ids=tuple(str(n) for n in path), length=length)

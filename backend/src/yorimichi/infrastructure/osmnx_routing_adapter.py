@@ -13,14 +13,30 @@ def _node_from_graph(graph, node_id) -> Node:
 
 
 def make_edge_weight_fn(graph, scenic_provider):
-    def weight_fn(u, v, data):
-        edge = Edge(
-            from_node=_node_from_graph(graph, u),
-            to_node=_node_from_graph(graph, v),
-            length=data.get("length", 1.0),
-            highway_tag=data.get("highway"),
+    def _edge_attr_dicts(edge_dict):
+        # For MultiDiGraph, networkx passes {edge_key: attrs}. For plain graphs,
+        # it may pass attrs directly.
+        if "length" in edge_dict or "highway" in edge_dict:
+            return [edge_dict]
+        return [data for data in edge_dict.values() if isinstance(data, dict)]
+
+    def weight_fn(u, v, edge_dict):
+        from_node = _node_from_graph(graph, u)
+        to_node = _node_from_graph(graph, v)
+
+        return min(
+            calculate_edge_cost(
+                Edge(
+                    from_node=from_node,
+                    to_node=to_node,
+                    length=data.get("length", 1.0),
+                    highway_tag=data.get("highway"),
+                ),
+                scenic_provider,
+            )
+            for data in _edge_attr_dicts(edge_dict)
         )
-        return calculate_edge_cost(edge, scenic_provider)
+
     return weight_fn
 
 

@@ -81,7 +81,7 @@ def test_heuristic_never_overestimates_actual_cost_via_networkx(simple_graph, or
 
     actual_path = nx.astar_path(simple_graph, orig, dest, heuristic=heuristic_fn, weight=weight_fn)
     actual_cost = sum(
-        weight_fn(actual_path[i], actual_path[i + 1], simple_graph.edges[actual_path[i], actual_path[i + 1], 0])
+        weight_fn(actual_path[i], actual_path[i + 1], simple_graph.get_edge_data(actual_path[i], actual_path[i + 1]))
         for i in range(len(actual_path) - 1)
     )
     heuristic_estimate = heuristic_fn(orig, dest)
