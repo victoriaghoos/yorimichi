@@ -9,6 +9,7 @@ re-index scenic data.
 """
 
 import math
+import pandas as pd
 import osmnx as ox
 import numpy as np
 from scipy.spatial import cKDTree
@@ -68,7 +69,8 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         coords = np.array([[pt.y, pt.x] for pt in centroids])
 
         self._weights = np.array([
-            get_poi_weight(row, category_boosts) for _, row in scenic_gdf.iterrows()
+            get_poi_weight({k: v for k, v in row.items() if pd.notna(v)}, category_boosts)
+            for _, row in scenic_gdf.iterrows()
         ])
         self._tree = cKDTree(coords)
         self._loaded_key = cache_key
