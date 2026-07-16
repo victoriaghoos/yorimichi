@@ -54,6 +54,15 @@ def test_scenic_penalty_stays_within_expected_bounds():
     assert BEST_CASE_SCENIC_PENALTY <= far_penalty <= 1.0
 
 
+def test_scenic_penalty_clamps_to_best_case_with_boosted_weight():
+    close_tree = FakeTree(fixed_distance=0.0)
+    boosted_weights = np.array([1.5])
+
+    penalty = compute_scenic_penalty(35.0, 135.0, close_tree, boosted_weights)
+
+    assert penalty == pytest.approx(BEST_CASE_SCENIC_PENALTY)
+
+
 def test_higher_weight_poi_gets_stronger_discount_at_same_distance():
     """A higher POI weight (e.g., temple) should yield a lower penalty than attraction at equal distance."""
     tree = FakeTree(fixed_distance=0.001)

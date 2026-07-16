@@ -197,5 +197,5 @@ def compute_scenic_penalty(edge_midpoint_lat, edge_midpoint_lon, tree, weights, 
     """
     dist, idx = tree.query([edge_midpoint_lat, edge_midpoint_lon])
     poi_weight = weights[idx]
-    proximity = max(0, 1 - (dist / max_influence_dist_degrees)) * poi_weight
+    proximity = min(1.0, max(0.0, 1 - (dist / max_influence_dist_degrees)) * poi_weight)
     return 1.0 - (proximity * MAX_SCENIC_DISCOUNT)
