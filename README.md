@@ -42,7 +42,7 @@ Hexagonal (Ports & Adapters), with real dependency inversion rather than just fo
 
 | Layer | Technology |
 | :--- | :--- |
-| Backend | Python 3.12+, FastAPI, NetworkX/OSMnx, SQLAlchemy 2.0, PostgreSQL/PostGIS, scipy (KD-tree), Poetry |
+| Backend | Python 3.12+, FastAPI, NetworkX/OSMnx, SQLAlchemy 2.0, PostgreSQL/PostGIS, scipy (KD-tree), Poetry, ruff + mypy |
 | Frontend | React 19, TypeScript, Vite, react-leaflet |
 | Data | OSM PBF extracts for Kansai and Kanto, imported into PostGIS via a custom batch importer (`backend/scripts/import_graph_to_postgis.py`) — 20.5M nodes / 44.4M edges currently loaded |
 
@@ -54,9 +54,10 @@ An actively-evolving **solo side project**, not a finished product:
 
 - ✅ Core algorithm, hexagonal architecture, and both graph backends are implemented and covered by 83 automated tests (unit + integration).
 - ✅ Working React/Leaflet frontend: click-to-set origin/destination, geolocation ("use my location"), per-category boost toggles, dual route rendering with a color-blind-safe palette.
-- ⚠️ No CI pipeline yet (no GitHub Actions), and no `ruff`/`mypy` config — type hints are used throughout but not automatically enforced.
+- ✅ CI on every push/PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)): backend `ruff` + `mypy` + unit tests, frontend ESLint + build. Integration tests (real network/DB calls) are excluded from CI and run manually.
 - ⚠️ `backend/tests/e2e/` exists but is currently empty.
 - ⚠️ Scenic scoring depends on OpenStreetMap tag quality, which is inherently inconsistent; the category-weight table is a manually curated approximation, not a solved problem.
+- ⚠️ 2 of the PostGIS-vs-OSMnx cross-backend integration tests are currently flaky: they compare a frozen PostGIS import (`kansai-260709`) against live OSMnx queries, and real-world OSM data has since drifted, not a bug in either backend, but a gap in the test design.
 - ❌ PWA/offline support and live GPS route-tracking while walking are not implemented (`vite-plugin-pwa` is listed as a dependency but not yet wired into `vite.config.ts`).
 - Single contributor so far (`victoriaghoos`).
 
