@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent / "scripts"))
 
-from yorimichi.domain.entities import Node, Edge
+from yorimichi.domain.entities import Edge, Node
 from yorimichi.domain.routing import (
     calculate_edge_cost,
     calculate_heuristic,

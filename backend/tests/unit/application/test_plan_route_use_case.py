@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 
-from yorimichi.application.plan_route_use_case import PlanScenicRouteUseCase, PlanRouteResult
+from yorimichi.application.plan_route_use_case import PlanRouteResult, PlanScenicRouteUseCase
 from yorimichi.domain.entities import Node, Route
 from yorimichi.domain.exceptions import CoordinatesOutOfRangeException
 from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository

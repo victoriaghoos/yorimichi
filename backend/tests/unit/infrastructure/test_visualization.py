@@ -1,8 +1,8 @@
 import networkx as nx
 
-from yorimichi.domain.entities import Route
 from yorimichi.application.plan_route_use_case import PlanRouteResult
-from yorimichi.infrastructure.visualization import print_route_comparison, _normalize_route_node_ids
+from yorimichi.domain.entities import Route
+from yorimichi.infrastructure.visualization import _normalize_route_node_ids, print_route_comparison
 
 
 def test_print_route_comparison_outputs_expected_format(capsys):

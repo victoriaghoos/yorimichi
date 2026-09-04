@@ -3,7 +3,7 @@ Infrastructure adapter: translates networkx's (u, v, data) graph structure
 into calls against the pure Domain routing logic.
 """
 
-from yorimichi.domain.entities import Node, Edge
+from yorimichi.domain.entities import Edge, Node
 from yorimichi.domain.routing import calculate_edge_cost, calculate_heuristic
 
 

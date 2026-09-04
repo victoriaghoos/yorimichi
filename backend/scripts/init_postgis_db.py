@@ -7,6 +7,7 @@ import os
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+
 from yorimichi.infrastructure.postgis_models import Base
 
 load_dotenv()

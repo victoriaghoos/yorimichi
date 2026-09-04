@@ -1,9 +1,9 @@
 import networkx as nx
 import pytest
 
-from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
-from yorimichi.domain.repositories import IGraphRepository
 from yorimichi.domain.entities import Node, Route
+from yorimichi.domain.repositories import IGraphRepository
+from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
 
 
 class FakeScenicDataProvider:

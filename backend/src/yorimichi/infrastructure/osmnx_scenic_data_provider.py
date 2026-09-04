@@ -11,13 +11,14 @@ re-index scenic data.
 import math
 import threading
 from dataclasses import dataclass
-import pandas as pd
-import osmnx as ox
+
 import numpy as np
+import osmnx as ox
+import pandas as pd
 from scipy.spatial import cKDTree
 
 from yorimichi.domain.repositories import IScenicDataProvider, IScenicIndex
-from yorimichi.domain.scoring import get_poi_weight, compute_scenic_penalty
+from yorimichi.domain.scoring import compute_scenic_penalty, get_poi_weight
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,7 @@ class OSMnxScenicDataProvider(IScenicDataProvider):
         if cached is not None:
             return cached
 
-        tags = {
+        tags: dict[str, bool | str | list[str]] = {
             "historic": True,
             "amenity": ["place_of_worship"],
             "leisure": ["park", "garden"],

@@ -6,11 +6,10 @@ graph library.
 
 import math
 
-from yorimichi.domain.entities import Node, Edge
+from yorimichi.domain.entities import Edge, Node
 from yorimichi.domain.scoring import (
-    compute_scenic_penalty,
-    get_road_penalty,
     BEST_CASE_SCENIC_PENALTY,
+    get_road_penalty,
 )
 
 EARTH_RADIUS_METERS = 6_371_000

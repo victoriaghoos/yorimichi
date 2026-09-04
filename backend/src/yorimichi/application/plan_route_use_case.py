@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from yorimichi.domain.entities import Route
 from yorimichi.domain.exceptions import CoordinatesOutOfRangeException
 from yorimichi.domain.repositories import IGraphRepository, IScenicDataProvider
-from yorimichi.domain.routing import haversine_distance, MAX_REASONABLE_DISTANCE_METERS
+from yorimichi.domain.routing import MAX_REASONABLE_DISTANCE_METERS, haversine_distance
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ class PlanScenicRouteUseCase:
         """
         coordinates: list[tuple[float, float]] = []
         for node_id in node_ids:
-            graph_node_id = node_id
+            graph_node_id: str | int = node_id
             if graph_node_id not in graph.nodes:
                 try:
                     graph_node_id = int(node_id)

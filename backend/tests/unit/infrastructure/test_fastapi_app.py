@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
-from yorimichi.infrastructure import fastapi_app
 from yorimichi.application.plan_route_use_case import PlanRouteResult
 from yorimichi.domain.entities import Route
 from yorimichi.domain.exceptions import CoordinatesOutOfRangeException
+from yorimichi.infrastructure import fastapi_app
 
 
 class FakeUseCase:
@@ -55,7 +55,10 @@ def test_get_route_supports_boost_categories_param():
     })
 
     assert response.status_code == 200
-    assert use_case.last_category_boosts == {"nature": fastapi_app.DEFAULT_BOOST_MULTIPLIER, "parks": fastapi_app.DEFAULT_BOOST_MULTIPLIER}
+    assert use_case.last_category_boosts == {
+        "nature": fastapi_app.DEFAULT_BOOST_MULTIPLIER,
+        "parks": fastapi_app.DEFAULT_BOOST_MULTIPLIER,
+    }
 
 
 def test_get_route_supports_explicit_category_boosts_param():

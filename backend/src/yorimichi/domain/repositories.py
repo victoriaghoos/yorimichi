@@ -1,5 +1,6 @@
 """
-Domain-owned repository ports (abstract interfaces). contract: only values it needs (a scenic penalty for a coordinate, a road penalty for an edge), never for the underlying
+Domain-owned repository ports (abstract interfaces). contract: only values it needs (a scenic
+penalty for a coordinate, a road penalty for an edge), never for the underlying
 data structures (KD-trees, GeoDataFrames, etc.) used to compute them.
 """
 

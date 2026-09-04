@@ -3,16 +3,17 @@ Infrastructure adapter: PostGIS-backed IGraphRepository implementation.
 """
 
 import math
+
 import networkx as nx
-from shapely.geometry import Point
 from geoalchemy2.shape import from_shape
-from sqlalchemy import create_engine, and_
-from sqlalchemy.orm import sessionmaker, aliased
+from shapely.geometry import Point
+from sqlalchemy import and_, create_engine
+from sqlalchemy.orm import aliased, sessionmaker
 
 from yorimichi.domain.entities import Node, Route
 from yorimichi.domain.repositories import IGraphRepository
 from yorimichi.infrastructure.osmnx_routing_adapter import make_edge_weight_fn, make_heuristic_fn
-from yorimichi.infrastructure.postgis_models import NodeModel, EdgeModel
+from yorimichi.infrastructure.postgis_models import EdgeModel, NodeModel
 
 
 class PostGISGraphRepository(IGraphRepository):
@@ -21,7 +22,7 @@ class PostGISGraphRepository(IGraphRepository):
     def __init__(self, database_url: str):
         self._engine = create_engine(database_url)
         self._Session = sessionmaker(bind=self._engine)
-        self._cached_graphs = {}
+        self._cached_graphs: dict[str, nx.MultiDiGraph] = {}
 
     def get_graph(
         self,

@@ -156,7 +156,7 @@ def get_poi_weight(row, category_boosts: dict[str, float] | None = None) -> floa
             return weight * _category_multiplier(category, category_boosts)
 
         if value not in EXCLUDED_VALUES and tag_col in LIKELY_SCENIC_KEYS:
-            fallback_category = LIKELY_SCENIC_FALLBACK_CATEGORIES.get(tag_col)
+            fallback_category = LIKELY_SCENIC_FALLBACK_CATEGORIES[tag_col]
             return LIKELY_SCENIC_FALLBACK_WEIGHT * _category_multiplier(fallback_category, category_boosts)
 
     if _tag_value(row, "religion") in ("buddhist", "shinto"):

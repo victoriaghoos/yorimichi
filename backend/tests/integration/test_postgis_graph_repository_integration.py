@@ -12,9 +12,9 @@ import os
 import pytest
 from dotenv import load_dotenv
 
-from yorimichi.infrastructure.postgis_graph_repository import PostGISGraphRepository
-from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
 from yorimichi.domain.repositories import IGraphRepository
+from yorimichi.infrastructure.osmnx_graph_repository import OSMnxGraphRepository
+from yorimichi.infrastructure.postgis_graph_repository import PostGISGraphRepository
 
 load_dotenv()
 

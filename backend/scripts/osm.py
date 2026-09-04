@@ -4,8 +4,9 @@ Counts the most frequent key=value tag combinations across an entire
 just the raw, empirical top tags for this region.
 """
 
-import osmium
 from collections import Counter
+
+import osmium
 
 PBF_PATH = "scripts/kansai-latest.osm.pbf"  # pas dit pad aan naar waar jouw bestand staat
 TOP_N = 500

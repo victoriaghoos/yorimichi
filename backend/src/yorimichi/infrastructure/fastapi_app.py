@@ -5,7 +5,7 @@ concrete Infrastructure implementations itself. That wiring belongs
 exclusively to the composition root (main.py).
 """
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 

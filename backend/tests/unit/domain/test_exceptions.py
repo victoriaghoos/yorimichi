@@ -1,6 +1,5 @@
-import pytest
 
-from yorimichi.domain.exceptions import DomainException, CoordinatesOutOfRangeException
+from yorimichi.domain.exceptions import CoordinatesOutOfRangeException, DomainException
 
 
 def test_coordinates_out_of_range_exception_inherits_from_domain_exception():

@@ -8,8 +8,9 @@ graph data.
 """
 
 import math
-import osmnx as ox
+
 import networkx as nx
+import osmnx as ox
 
 from yorimichi.domain.entities import Node, Route
 from yorimichi.domain.repositories import IGraphRepository

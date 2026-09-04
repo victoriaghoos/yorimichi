@@ -1,3 +1,4 @@
+import dataclasses
 import sys
 from pathlib import Path
 
@@ -5,13 +6,13 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent / "scripts"))
 
 import pytest
 
-from yorimichi.domain.entities import Node, Edge, Route
+from yorimichi.domain.entities import Edge, Node, Route
 
 
 def test_node_is_immutable():
     """Node is frozen — confirms accidental mutation is prevented."""
     node = Node(id="a", lat=35.0, lon=135.0)
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         node.lat = 36.0
 
 
@@ -28,7 +29,7 @@ def test_edge_holds_node_references():
 def test_route_is_immutable():
     """Route is frozen — confirms accidental mutation is prevented."""
     route = Route(node_ids=("1", "2", "3"), length=150.5)
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         route.length = 200.0
 
 

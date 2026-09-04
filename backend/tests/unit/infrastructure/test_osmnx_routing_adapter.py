@@ -90,7 +90,7 @@ def test_heuristic_never_overestimates_actual_cost_via_networkx(simple_graph, or
 
 
 def test_scenic_route_produces_valid_connected_path(simple_graph):
-    scenic_provider = FakeScenicDataProvider(fixed_penalty=BEST_CASE_SCENIC_PENALTY if False else 0.7)
+    scenic_provider = FakeScenicDataProvider(fixed_penalty=0.7)
     weight_fn = make_edge_weight_fn(simple_graph, scenic_provider)
     heuristic_fn = make_heuristic_fn(simple_graph)
 

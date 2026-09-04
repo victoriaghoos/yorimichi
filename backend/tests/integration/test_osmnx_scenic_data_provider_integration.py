@@ -12,8 +12,8 @@ rather than as part of routine fast unit-test iteration.
 
 import pytest
 
-from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
 from yorimichi.domain.scoring import BEST_CASE_SCENIC_PENALTY
+from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
 
 # Real, known coordinates from manual verification in this project:
 # Kiyomizu-dera (near many temples/shrines: should score close to maximum discount)
