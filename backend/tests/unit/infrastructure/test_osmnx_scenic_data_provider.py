@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 
 from yorimichi.infrastructure.osmnx_scenic_data_provider import OSMnxScenicDataProvider
@@ -31,7 +30,10 @@ def test_load_returns_scenic_index_with_penalty_lookup(monkeypatch):
     scenic_gdf = pd.DataFrame([{"natural": "tree"}])
     scenic_gdf.crs = "EPSG:4326"
 
-    monkeypatch.setattr("yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox", lambda bbox, tags: scenic_gdf)
+    monkeypatch.setattr(
+        "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox",
+        lambda bbox, tags: scenic_gdf,
+    )
     monkeypatch.setattr(
         "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.projection.project_gdf",
         lambda gdf: FakeProjectedGdf(FakeGeometrySeries()),
@@ -86,7 +88,10 @@ def test_load_requests_expected_scenic_feature_tags(monkeypatch):
         captured["tags"] = tags
         return scenic_gdf
 
-    monkeypatch.setattr("yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox", fake_features_from_bbox)
+    monkeypatch.setattr(
+        "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox",
+        fake_features_from_bbox,
+    )
     monkeypatch.setattr(
         "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.projection.project_gdf",
         lambda gdf: FakeProjectedGdf(FakeGeometrySeries()),
@@ -138,7 +143,10 @@ def test_load_reuses_cached_immutable_index_for_same_key(monkeypatch):
         call_count["features"] += 1
         return scenic_gdf
 
-    monkeypatch.setattr("yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox", fake_features_from_bbox)
+    monkeypatch.setattr(
+        "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.features_from_bbox",
+        fake_features_from_bbox,
+    )
     monkeypatch.setattr(
         "yorimichi.infrastructure.osmnx_scenic_data_provider.ox.projection.project_gdf",
         lambda gdf: FakeProjectedGdf(FakeGeometrySeries()),
