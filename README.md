@@ -58,7 +58,7 @@ An actively-evolving **solo side project**, not a finished product:
 - ⚠️ `backend/tests/e2e/` exists but is currently empty.
 - ⚠️ Scenic scoring depends on OpenStreetMap tag quality, which is inherently inconsistent; the category-weight table is a manually curated approximation, not a solved problem.
 - ❌ PWA/offline support and live GPS route-tracking while walking are not implemented (`vite-plugin-pwa` is listed as a dependency but not yet wired into `vite.config.ts`).
-- 
+
 
 ## Repository structure
 
