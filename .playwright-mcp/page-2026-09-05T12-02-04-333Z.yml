@@ -1,0 +1,47 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic:
+      - generic [ref=e5]:
+        - button "Zoom in" [ref=e6] [cursor=pointer]: +
+        - button "Zoom out" [ref=e7] [cursor=pointer]: −
+      - generic [ref=e8]:
+        - link "Leaflet" [ref=e9] [cursor=pointer]:
+          - /url: https://leafletjs.com
+        - text: "| ©"
+        - link "OpenStreetMap" [ref=e14] [cursor=pointer]:
+          - /url: https://www.openstreetmap.org/copyright
+        - text: contributors
+  - generic [ref=e15]:
+    - button "Collapse panel" [ref=e16] [cursor=pointer]: ▾
+    - generic [ref=e17]:
+      - heading "Route Controls" [level=2] [ref=e19]
+      - generic [ref=e20]: Click the map, or use your location, to set a starting point.
+      - generic "Route legend" [ref=e22]:
+        - generic [ref=e23]: Baseline
+        - generic [ref=e26]: Scenic
+      - button "Use my location" [ref=e30] [cursor=pointer]
+      - group "Scenic preference boosts" [ref=e31]:
+        - button "神社仏閣 Shrines & Temples" [ref=e32] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e34]: ⛩️
+          - generic [ref=e35]: 神社仏閣
+          - generic [ref=e36]: Shrines & Temples
+        - button "公園・緑地 Parks & Green Spaces" [ref=e37] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e39]: 🌸
+          - generic [ref=e40]: 公園・緑地
+          - generic [ref=e41]: Parks & Green Spaces
+        - button "水辺 Waterside" [ref=e42] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e44]: 🌊
+          - generic [ref=e45]: 水辺
+          - generic [ref=e46]: Waterside
+        - button "史跡 Historic Sites" [ref=e47] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e49]: 🏯
+          - generic [ref=e50]: 史跡
+          - generic [ref=e51]: Historic Sites
+        - button "自然 Nature" [ref=e52] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e54]: 🌳
+          - generic [ref=e55]: 自然
+          - generic [ref=e56]: Nature
+        - button "景観スポット Scenic Viewpoints" [ref=e57] [cursor=pointer]:
+          - generic [aria-hidden] [ref=e59]: 🌉
+          - generic [ref=e60]: 景観スポット
+          - generic [ref=e61]: Scenic Viewpoints

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L, { type PathOptions } from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -6,8 +6,11 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import ClickHandler from './ClickHandler'
 import MapFlyTo from './MapFlyTo'
+import FollowPosition from './FollowPosition'
+import LiveLocationMarker from './LiveLocationMarker'
 import './RouteMap.css'
 import type { Coordinate, RouteResponse, ScenicCategory, StatusMessage } from '../types'
+import { trackProgressAlongRoute } from '../utils/geo'
 
 // @ts-expect-error: Leaflet's default icon setup requires deleting this internal property which isn't part of Leaflet's public TypeScript definitions.
 delete L.Icon.Default.prototype._getIconUrl
@@ -34,6 +37,15 @@ const ROUTE_STYLES: Record<'baseline' | 'scenic', PathOptions> = {
   },
 }
 
+const WALKED_STYLE: PathOptions = {
+  color: '#94a3b8',
+  weight: 5,
+  opacity: 0.7,
+  dashArray: '2 8',
+}
+
+const ARRIVAL_THRESHOLD_METERS = 20
+
 const SCENIC_CATEGORIES: ScenicCategory[] = [
   { key: 'shrines_temples', emoji: '⛩️', jpLabel: '神社仏閣', sublabel: 'Shrines & Temples' },
   { key: 'parks', emoji: '🌸', jpLabel: '公園・緑地', sublabel: 'Parks & Green Spaces' },
@@ -54,6 +66,12 @@ function RouteMap() {
     if (typeof window === 'undefined') return true
     return window.innerWidth > MOBILE_BREAKPOINT
   })
+  const [walking, setWalking] = useState(false)
+  const [livePosition, setLivePosition] = useState<Coordinate | null>(null)
+  const [liveAccuracy, setLiveAccuracy] = useState<number | undefined>(undefined)
+  const [walkError, setWalkError] = useState<string | null>(null)
+  const watchIdRef = useRef<number | null>(null)
+  const scenicCoordinatesRef = useRef<[number, number][]>([])
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
@@ -109,12 +127,61 @@ function RouteMap() {
     )
   }, [])
 
+  const handleStopWalking = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+    }
+    setWalking(false)
+  }, [])
+
+  const handleStartWalking = useCallback(() => {
+    if (!navigator.geolocation) {
+      setWalkError('Geolocation is not supported by your browser.')
+      return
+    }
+    setWalkError(null)
+    setWalking(true)
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const lat = position.coords.latitude
+        const lon = position.coords.longitude
+        setLivePosition({ lat, lon })
+        setLiveAccuracy(position.coords.accuracy)
+        setWalkError(null)
+
+        const coords = scenicCoordinatesRef.current
+        if (coords.length > 1) {
+          const arrivalProgress = trackProgressAlongRoute(coords, [lat, lon])
+          if (arrivalProgress && arrivalProgress.remainingMeters < ARRIVAL_THRESHOLD_METERS) {
+            handleStopWalking()
+          }
+        }
+      },
+      (geoError) => {
+        setWalkError(`Lost GPS signal: ${geoError.message}`)
+      },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+    )
+  }, [handleStopWalking])
+
   const handleReset = useCallback(() => {
+    handleStopWalking()
+    setLivePosition(null)
     setOrigin(null)
     setDestination(null)
     setRouteData(null)
     setActiveCategories(new Set())
     setError(null)
+  }, [handleStopWalking])
+
+  // Stop tracking automatically if the watch's underlying browser API is unavailable when unmounting.
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -165,7 +232,19 @@ function RouteMap() {
   }, [origin, destination, activeCategories])
 
   const baselineCoordinates = routeData?.baseline?.coordinates ?? []
-  const scenicCoordinates = routeData?.scenic?.coordinates ?? []
+  const scenicCoordinates = useMemo(() => routeData?.scenic?.coordinates ?? [], [routeData])
+
+  useEffect(() => {
+    scenicCoordinatesRef.current = scenicCoordinates
+  }, [scenicCoordinates])
+
+  const progress =
+    walking && livePosition && scenicCoordinates.length > 1
+      ? trackProgressAlongRoute(scenicCoordinates, [livePosition.lat, livePosition.lon])
+      : null
+
+  const walkedCoordinates = progress ? scenicCoordinates.slice(0, progress.nearestIndex + 1) : []
+  const remainingCoordinates = progress ? scenicCoordinates.slice(progress.nearestIndex) : scenicCoordinates
 
   const getStatusMessage = (): StatusMessage => {
     if (error) return { kind: 'error', text: `Error: ${error}` }
@@ -193,6 +272,7 @@ function RouteMap() {
 
         <ClickHandler onMapClick={handleMapClick} />
         <MapFlyTo position={origin} />
+        <FollowPosition position={livePosition} enabled={walking} />
 
         {origin && (
           <Marker position={[origin.lat, origin.lon]}>
@@ -205,11 +285,20 @@ function RouteMap() {
           </Marker>
         )}
 
-        {baselineCoordinates.length > 1 && (
+        {!walking && baselineCoordinates.length > 1 && (
           <Polyline positions={baselineCoordinates} pathOptions={ROUTE_STYLES.baseline} />
         )}
-        {scenicCoordinates.length > 1 && (
+        {!walking && scenicCoordinates.length > 1 && (
           <Polyline positions={scenicCoordinates} pathOptions={ROUTE_STYLES.scenic} />
+        )}
+        {walking && walkedCoordinates.length > 1 && (
+          <Polyline positions={walkedCoordinates} pathOptions={WALKED_STYLE} />
+        )}
+        {walking && remainingCoordinates.length > 1 && (
+          <Polyline positions={remainingCoordinates} pathOptions={ROUTE_STYLES.scenic} />
+        )}
+        {walking && livePosition && (
+          <LiveLocationMarker position={livePosition} accuracyMeters={liveAccuracy} />
         )}
       </MapContainer>
 
@@ -254,6 +343,28 @@ function RouteMap() {
                 <span className="legend-dot scenic" aria-hidden="true" /> Scenic
               </span>
             </div>
+
+            {scenicCoordinates.length > 1 && (
+              <div className="walk-panel">
+                {walking ? (
+                  <>
+                    <div className="walk-status">
+                      {progress
+                        ? `🚶 ${Math.round(progress.remainingMeters)} m remaining`
+                        : '🚶 Waiting for GPS signal…'}
+                    </div>
+                    {walkError && <div className="status-error">{walkError}</div>}
+                    <button onClick={handleStopWalking} className="map-action-btn secondary">
+                      Stop walking
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={handleStartWalking} className="map-action-btn walk-start">
+                    Start walking (live GPS)
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="action-row">
               <button onClick={handleUseMyLocation} className="map-action-btn">

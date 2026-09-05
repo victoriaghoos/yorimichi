@@ -18,7 +18,14 @@ app = FastAPI(title="Yorimichi API", description="Scenic route planning for Kans
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    # 5173 is the Vite dev server; 4173 is `vite preview`, needed to test the
+    # PWA build since the service worker only registers in production builds.
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

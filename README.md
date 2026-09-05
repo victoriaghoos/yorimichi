@@ -55,9 +55,9 @@ An actively-evolving **solo side project**, not a finished product:
 - ✅ Core algorithm, hexagonal architecture, and both graph backends are implemented and covered by 83 automated tests (unit + integration).
 - ✅ Working React/Leaflet frontend: click-to-set origin/destination, geolocation ("use my location"), per-category boost toggles, dual route rendering with a color-blind-safe palette.
 - ✅ CI on every push/PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)): backend `ruff` + `mypy` + unit tests, frontend ESLint + build. Integration tests (real network/DB calls) are excluded from CI and run manually.
+- ✅ PWA/offline support (`vite-plugin-pwa`, installable, OSM tiles + `/route` responses cached for offline use) and live GPS route-tracking while walking (real-time position, remaining-distance readout, walked-vs-remaining route styling, auto-follow map) are implemented.
 - ⚠️ `backend/tests/e2e/` exists but is currently empty.
 - ⚠️ Scenic scoring depends on OpenStreetMap tag quality, which is inherently inconsistent; the category-weight table is a manually curated approximation, not a solved problem.
-- ❌ PWA/offline support and live GPS route-tracking while walking are not implemented (`vite-plugin-pwa` is listed as a dependency but not yet wired into `vite.config.ts`).
 
 
 ## Repository structure
