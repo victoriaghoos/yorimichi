@@ -34,7 +34,7 @@ Hexagonal (Ports & Adapters), with real dependency inversion rather than just fo
 
 - **Domain** (`domain/`): pure Python: entities (`Node`, `Edge`, `Route`), scoring, the S-A* math, and abstract ports (`IGraphRepository`, `IScenicDataProvider`). No OSMnx/NetworkX/PostGIS imports.
 - **Application** (`application/`): `PlanScenicRouteUseCase` orchestrates domain logic purely through ports; it never leaks raw infrastructure objects (e.g. a NetworkX graph) to its callers.
-- **Infrastructure** (`infrastructure/`): two interchangeable `IGraphRepository` adapters, in-memory OSMnx/NetworkX, and PostGIS (using a real spatial nearest-node query), plus a scenic-POI provider and the FastAPI entrypoint. The backend is selectable via a `YORIMICHI_GRAPH_BACKEND` env var, and an integration test asserts both backends return identical routes for the same input.
+- **Infrastructure** (`infrastructure/`): two interchangeable `IGraphRepository` adapters, in-memory OSMnx/NetworkX, and PostGIS (using a real spatial nearest-node query), plus a scenic-POI provider and the FastAPI entrypoint. The backend is selectable via a `YORIMICHI_GRAPH_BACKEND` env var, and an integration test asserts both backends return comparable-length routes for the same input (within a tolerance, since PostGIS is a periodically-imported snapshot while OSMnx queries live OSM data).
 
 ---
 
@@ -57,11 +57,8 @@ An actively-evolving **solo side project**, not a finished product:
 - ✅ CI on every push/PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)): backend `ruff` + `mypy` + unit tests, frontend ESLint + build. Integration tests (real network/DB calls) are excluded from CI and run manually.
 - ⚠️ `backend/tests/e2e/` exists but is currently empty.
 - ⚠️ Scenic scoring depends on OpenStreetMap tag quality, which is inherently inconsistent; the category-weight table is a manually curated approximation, not a solved problem.
-- ⚠️ 2 of the PostGIS-vs-OSMnx cross-backend integration tests are currently flaky: they compare a frozen PostGIS import (`kansai-260709`) against live OSMnx queries, and real-world OSM data has since drifted, not a bug in either backend, but a gap in the test design.
 - ❌ PWA/offline support and live GPS route-tracking while walking are not implemented (`vite-plugin-pwa` is listed as a dependency but not yet wired into `vite.config.ts`).
-- Single contributor so far (`victoriaghoos`).
-
----
+- 
 
 ## Repository structure
 
